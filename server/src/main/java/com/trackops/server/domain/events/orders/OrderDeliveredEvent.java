@@ -1,21 +1,22 @@
 package com.trackops.server.domain.events.orders;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class OrderDeliveredEvent extends OrderEvent {
 
-    private final String orderDeliveredAt;
+    private final LocalDateTime deliveredAt;
 
-    public OrderDeliveredEvent(UUID orderId, String orderDeliveredAt) {
+    public OrderDeliveredEvent(UUID orderId, LocalDateTime deliveredAt) {
 
         super(orderId, "ORDER_DELIVERED");
-        this.orderDeliveredAt = orderDeliveredAt;
+        this.deliveredAt = deliveredAt;
 
     }
 
-    public String getOrderDeliveredAt() {
+    public LocalDateTime getDeliveredAt() {
 
-        return orderDeliveredAt;
+        return deliveredAt;
 
     }
 

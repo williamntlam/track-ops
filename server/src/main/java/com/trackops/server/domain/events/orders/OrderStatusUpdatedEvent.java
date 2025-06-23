@@ -1,6 +1,7 @@
 package com.trackops.server.domain.events.orders;
 
 import java.util.UUID;
+import com.trackops.server.domain.OrderStatus;
 
 public class OrderStatusUpdatedEvent extends OrderEvent {
 
