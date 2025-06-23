@@ -1,20 +1,23 @@
 package com.trackops.server.domain.events.orders;
 
-public class OrderDeliveredEvent extends OrderEvent {
+import java.util.UUID;
 
-    private final String orderDeliveratedAt;
+public class OrderStatusUpdatedEvent extends OrderEvent {
 
-    public OrderDeliveredEvent(UUID orderId, String orderDeliveratedAt) {
+    private final OrderStatus previousStatus;
+    private final OrderStatus newStatus;
 
-        super(orderId, "orderDelivered")
-        this.orderDeliveratedAt = orderDeliveratedAt;
-
+    public OrderStatusUpdatedEvent(UUID orderId, OrderStatus previousStatus, OrderStatus newStatus) {
+        super(orderId, "ORDER_STATUS_UPDATED");
+        this.previousStatus = previousStatus;
+        this.newStatus = newStatus;
     }
 
-    public String getOrderDeliveratedAt() {
-
-        return orderDeliveratedAt;
-
+    public OrderStatus getPreviousStatus() {
+        return previousStatus;
     }
 
+    public OrderStatus getNewStatus() {
+        return newStatus;
+    }
 }

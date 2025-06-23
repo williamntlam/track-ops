@@ -8,7 +8,7 @@ public class OrderDeliveredEvent extends OrderEvent {
 
     public OrderDeliveredEvent(UUID orderId, String orderDeliveredAt) {
 
-        super(orderId, "orderDelivered");
+        super(orderId, "ORDER_DELIVERED");
         this.orderDeliveredAt = orderDeliveredAt;
 
     }

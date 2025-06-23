@@ -8,7 +8,7 @@ public class OrderCreatedEvent extends OrderEvent {
 
     public OrderCreatedAt(UUID orderId, String createdBy) {
 
-        super(orderId, "orderCreated")
+        super(orderId, "ORDER_CREATED")
         this.createdBy = createdBy;
 
     }
