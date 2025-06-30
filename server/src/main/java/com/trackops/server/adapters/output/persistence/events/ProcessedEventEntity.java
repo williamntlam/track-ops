@@ -15,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProcessedEvent {
+public class ProcessedEventEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
