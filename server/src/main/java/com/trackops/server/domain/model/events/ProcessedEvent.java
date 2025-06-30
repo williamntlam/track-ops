@@ -1,10 +1,20 @@
+package com.trackops.server.domain.model.events;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+import java.util.UUID;
+
 @Entity
 @Table(name = "processed_events")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(of = "id")
 public class ProcessedEvent {
     
     @Id
@@ -23,29 +33,6 @@ public class ProcessedEvent {
     @Column(name = "processed_at", nullable = false)
     private Instant processedAt;
     
-    @Column(name = "success", nullable = false)
-    private Boolean success;
-    
-    @Column(name = "error_message")
-    private String errorMessage;
-    
-    @Column(name = "retry_count")
-    private Integer retryCount;
-    
-    @Column(name = "consumer_group")
-    private String consumerGroup;
-    
-    @Column(name = "partition")
-    private Integer partition;
-    
-    @Column(name = "offset")
-    private Long offset;
-    
-    @Column(name = "created_at")
-    private Instant createdAt;
-    
-    @PrePersist
-    protected void onCreate() {
-        createdAt = Instant.now();
-    }
+    @Column(name = "processing_result")
+    private String processingResult;
 }
