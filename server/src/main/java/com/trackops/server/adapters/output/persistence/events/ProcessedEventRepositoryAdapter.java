@@ -1,65 +1,52 @@
-@Entity
-@Table(name = "orders")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@EqualsAndHashCode(of = "id")
-public class OrderEntity {
+package com.trackops.server.adapters.output.persistence.events;
+
+import com.trackops.server.domain.model.events.ProcessedEvent;
+import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+import java.util.UUID;
+import java.util.List;
+
+import com.trackops.server.adapters.output.persistence.events.ProcessedEventJpaRepository;
+
+@Repository
+public class ProcessedEventRepositoryAdapter implements ProcessedEventRepository {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;  
-    
-    @Column(name = "customer_id", nullable = false)
-    private UUID customerId; 
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private OrderStatus status;  
-    
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalAmount; 
-    
-    @Column(name = "street_address")
-    private String streetAddress;
-    
-    @Column(name = "city")
-    private String city; 
-    
-    @Column(name = "state")
-    private String state;
-    
-    @Column(name = "postal_code")
-    private String postalCode;
-    
-    @Column(name = "country")
-    private String country;
-    
-    @Column(name = "phone_number")
-    private String phoneNumber;
-    
-    @Column(name = "delivery_instructions")
-    private String deliveryInstructions;
-    
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
-    
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
-    
-    @Version
-    @Column(name = "version")
-    private Long version;
-    
-    @PrePersist
-    protected void onCreate() {
-        createdAt = Instant.now();
-        updatedAt = Instant.now();
+    private final ProcessedEventJpaRepository processedEventJpaRepository;
+
+    public ProcessedEventRepositoryAdapter(ProcessedEventJpaRepository processedEventJpaRepository) {
+        this.processedEventJpaRepository = processedEventJpaRepository;
     }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
+
+    @Override
+    public ProcessedEvent save(ProcessedEvent processedEvent) {
+        return processedEventJpaRepository.save(processedEvent);
     }
+
+    @Override
+    public Optional<ProcessedEvent> findByEventId(UUID eventId) {
+        return processedEventJpaRepository.findByEventId(eventId);
+    }
+
+    @Override
+    public Optional<ProcessedEvent> findByOrderId(UUID orderId) {
+        return processedEventJpaRepository.findByOrderId(orderId);
+    }
+
+    @Override
+    public List<ProcessedEvent> findAll() {
+        return processedEventJpaRepository.findAll();
+    }
+
+    @Override
+    public void deleteById(UUID id) {
+        processedEventJpaRepository.delete(id);
+    }
+
+    @Override
+    public boolean existsById(UUID id) {
+        returnprocessedEventJpaRepository.find(id);
+    }
+
 }

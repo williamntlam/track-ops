@@ -4,7 +4,7 @@ import com.trackops.server.domain.model.orders.Order;
 import com.trackops.server.domain.model.enums.OrderStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;     // ✅ Correct import
+import org.springframework.stereotype.Repository;   
 
 import java.util.List;
 import java.util.UUID;
