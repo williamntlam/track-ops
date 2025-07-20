@@ -7,6 +7,8 @@ import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
 import com.trackops.server.ports.output.cache.IdempotencyCachePort; 
 
+import java.util.UUID;
+
 @Service
 public class OrderEventProcessorService implements OrderEventProcessorPort {
 
@@ -19,11 +21,35 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
         this.orderRepository = orderRepository;
         this.processedEventRepository = processedEventRepository;
         this.idempotencyCachePort = idempotencyCachePort;
-        
+
     }
 
     public void processOrderEvent(OrderEvent event) {
         
+        try {
+
+            // Step One: Check idempotency cache port to see if the 
+            // database query has already been completed.
+
+            UUID eventId = event.getEventId();
+            UUID orderId = event.getOrderId();
+
+            if (idempotencyCachePort.isEventProcessed(eventId, "consumer_group")) {
+
+                
+
+            }
+
+
+            // Step Two: Load and Process the order with the OrderRepository
+
+            // Step Three: Mark event as processed with ProcessedEventRepository
+
+
+        } catch (error) {
+
+        }
+
     }
 
 }

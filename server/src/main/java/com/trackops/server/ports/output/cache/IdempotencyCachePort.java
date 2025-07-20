@@ -5,8 +5,8 @@ import java.util.UUID;
 
 public interface IdempotencyCachePort {
 
-    boolean isEventProcessed(UUID eventId, String consumerGroup);
-    void markEventProcessed(UUID eventId, String consumerGroup, Duration ttl);
-    String getProcessingResult(UUID eventId, String consumerGroup);
+    boolean isEventProcessed(UUID eventId);
+    void markEventProcessed(UUID eventId, Duration ttl);
+    String getProcessingResult(UUID eventId);
 
 }
