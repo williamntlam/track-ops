@@ -6,11 +6,18 @@ import com.trackops.server.domain.events.orders.OrderEvent;
 import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
 import com.trackops.server.ports.output.cache.IdempotencyCachePort; 
-
+import com.trackops.server.domain.model.events.ProcessedEvent;
+import com.trackops.server.domain.model.orders.Order;
+import com.trackops.server.domain.model.enums.EventType;
+import java.time.Duration;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class OrderEventProcessorService implements OrderEventProcessorPort {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderEventProcessorService.class);
 
     private final OrderRepository orderRepository;
     private final ProcessedEventRepository processedEventRepository;
@@ -27,27 +34,39 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
     public void processOrderEvent(OrderEvent event) {
         
         try {
-
-            // Step One: Check idempotency cache port to see if the 
-            // database query has already been completed.
-
             UUID eventId = event.getEventId();
             UUID orderId = event.getOrderId();
 
-            if (idempotencyCachePort.isEventProcessed(eventId, "consumer_group")) {
-
-                
-
+            // Step One: Check idempotency
+            if (idempotencyCachePort.isEventProcessed(eventId)) {
+                return; // Already processed
             }
 
+            // Step Two: Load and Process the order
+            Order processedOrder = orderRepository.findById(orderId)
+                .map(order -> {
+                    order.process();
+                    return orderRepository.save(order);
+                })
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
-            // Step Two: Load and Process the order with the OrderRepository
+            // Step Three: Mark event as processed
+            ProcessedEvent processedEvent = ProcessedEvent.createForOrderEvent(
+                eventId,
+                orderId,
+                event.getEventType(),
+                processedOrder.getStatus(), 
+                "order-processor",
+                0L
+            );
+            processedEventRepository.save(processedEvent);
 
-            // Step Three: Mark event as processed with ProcessedEventRepository
+            // Step Four: Mark as processed in idempotency cache
+            idempotencyCachePort.markEventProcessed(eventId, Duration.ofHours(24));
 
-
-        } catch (error) {
-
+        } catch (Exception e) {
+            log.error("Failed to process order event: {}", event.getEventId(), e);
+            throw new RuntimeException("Failed to process order event", e);
         }
 
     }

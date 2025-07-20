@@ -3,6 +3,7 @@ package com.trackops.server.domain.model.events;
 import com.trackops.server.domain.model.enums.EventType;
 import com.trackops.server.domain.model.enums.OrderStatus;
 import java.time.Instant;
+import java.util.UUID;
 
 public class ProcessedEvent {
 
@@ -24,6 +25,25 @@ public class ProcessedEvent {
         this.consumerGroup = consumerGroup;
         this.offset = offset;
 
+    }
+
+    public static ProcessedEvent createForOrderEvent(
+            UUID eventId, 
+            UUID orderId, 
+            EventType eventType, 
+            OrderStatus orderStatus, 
+            String consumerGroup, 
+            Long offset) {
+        
+        return new ProcessedEvent(
+            eventId.toString(),
+            orderId.getMostSignificantBits(), // Convert UUID to Long
+            eventType,
+            Instant.now(),
+            orderStatus,
+            consumerGroup,
+            offset
+        );
     }
 
     public String getEventId() { return eventId; }
