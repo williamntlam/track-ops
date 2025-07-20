@@ -10,10 +10,17 @@ import com.trackops.server.ports.output.cache.IdempotencyCachePort;
 @Service
 public class OrderEventProcessorService implements OrderEventProcessorPort {
 
-    // ports
-    // order repository
-    // processed event repository
-    // idempotency cache
+    private final OrderRepository orderRepository;
+    private final ProcessedEventRepository processedEventRepository;
+    private final IdempotencyCachePort idempotencyCachePort;
+
+    public OrderEventProcessorService(OrderRepository orderRepository, ProcessedEventRepository processedEventRepository, IdempotencyCachePort idempotencyCachePort) {
+        
+        this.orderRepository = orderRepository;
+        this.processedEventRepository = processedEventRepository;
+        this.idempotencyCachePort = idempotencyCachePort;
+        
+    }
 
     public void processOrderEvent(OrderEvent event) {
         
