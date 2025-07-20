@@ -19,33 +19,33 @@ public class RedisIdempotencyCacheAdapter implements IdempotencyCachePort {
     }
 
     @Override
-    public boolean isEventProcessed(UUID eventId, String consumerGroup) {
+    public boolean isEventProcessed(UUID eventId) {
         try {
-            String key = "processed_event:" + eventId + ":" + consumerGroup;
+            String key = "processed_event:" + eventId;
             return redisTemplate.hasKey(key);
         } catch (Exception e) {
-            log.error("Failed to check if event {} is processed for consumer group {}", eventId, consumerGroup, e);
+            log.error("Failed to check if event {} is processed", eventId, e);
             return false;
         }
     }
 
     @Override
-    public void markEventProcessed(UUID eventId, String consumerGroup, Duration ttl) {
+    public void markEventProcessed(UUID eventId, Duration ttl) {
         try {
-            String key = "processed_event:" + eventId + ":" + consumerGroup;
+            String key = "processed_event:" + eventId;
             redisTemplate.opsForValue().set(key, "true", ttl);
         } catch (Exception e) {
-            log.error("Failed to mark event {} as processed for consumer group {}", eventId, consumerGroup, e);
+            log.error("Failed to mark event {} as processed", eventId, e);
         }
     }
 
     @Override
-    public String getProcessingResult(UUID eventId, String consumerGroup) {
+    public String getProcessingResult(UUID eventId) {
         try {
-            String key = "processed_event:" + eventId + ":" + consumerGroup;
+            String key = "processed_event:" + eventId;
             return redisTemplate.opsForValue().get(key);
         } catch (Exception e) {
-            log.error("Failed to get processing result for event {} in consumer group {}", eventId, consumerGroup, e);
+            log.error("Failed to get processing result for event {}", eventId, e);
             return null;
         }
     }
