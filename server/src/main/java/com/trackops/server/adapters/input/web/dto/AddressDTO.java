@@ -6,18 +6,20 @@ public class AddressDTO {
     private String city;
     private String postalCode;
     private String country;
+    private string state;
     private String phoneNumber;
 
     public AddressDTO() {
 
     }
 
-    public AddressDTO(String streetAddress, String city, String postalCode, String country, String phoneNumber) {
+    public AddressDTO(String streetAddress, String city, String postalCode, String country, String state, String phoneNumber) {
 
         this.streetAddress = streetAddress;
         this.city = city;
         this.postalCode = postalCode;
         this.country = country;
+        this.state = state;
         this.phoneNumber = phoneNumber; 
 
     }
@@ -46,15 +48,20 @@ public class AddressDTO {
         this.postalCode = postalCode;
     }
 
-    // this.country = country;
-    // this.phoneNumber = phoneNumber; 
-
     public String getCountry() {
         return country;
     }
 
     public void setCountry(String country) {
         this.country = country;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 
     public String getPhoneNumber() {
