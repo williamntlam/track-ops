@@ -10,22 +10,22 @@ import java.util.List;
 public class OrderMapper {
 
     // Order Object to OrderResponse
-    public OrderResponse toOrderResponse(Order order) {
+    public OrderResponse orderToOrderResponse(Order order) {
 
     }
 
     // CreateOrderRequest to Order Object
-    public OrderResponse toOrder(CreateOrderRequest request) {
+    public OrderResponse createOrderRequestToOrderResponse(CreateOrderRequest request) {
 
     }
 
     // AddressDTO to Address Object
-    public Address toAddress(AddressDTO dto) {
+    public Address createAddressObjectFromAddressDTO(AddressDTO dto) {
 
     }
 
     // Map of a list of Order objects to a list of OrderResponse
-    public List<OrderResponse> toOrderResponseList(List<Order> orders) {
+    public List<OrderResponse> createOrderResponseList(List<Order> orders) {
 
     }
 
