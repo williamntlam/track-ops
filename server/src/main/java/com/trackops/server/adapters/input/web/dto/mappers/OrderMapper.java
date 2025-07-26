@@ -9,6 +9,21 @@ import java.util.List;
 
 public class OrderMapper {
 
+    /*
+    
+    public OrderResponse(UUID id, UUID customerId, OrderStatus status, BigDecimal totalAmount, AddressDTO address, String deliveryInstructions, Instant createdAt, Instant updatedAt) {
+        this.id = id;
+        this.customerId = customerId;
+        this.status = status;
+        this.totalAmount = totalAmount;
+        this.address = address;
+        this.deliveryInstructions = deliveryInstructions;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+      
+    */
+
     // Order Object to OrderResponse
     public OrderResponse orderToOrderResponse(Order order) {
 

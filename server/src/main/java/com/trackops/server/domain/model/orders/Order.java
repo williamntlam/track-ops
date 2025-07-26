@@ -14,6 +14,46 @@ public class Order {
     private Instant createdAt;
     private Instant updatedAt;
 
+    // Constructors
+    public Order() {}
+
+    public Order(UUID id, UUID customerId, OrderStatus status, BigDecimal totalAmount, Address address, String deliveryInstructions, Instant createdAt, Instant updatedAt) {
+        this.id = id;
+        this.customerId = customerId;
+        this.status = status;
+        this.totalAmount = totalAmount;
+        this.address = address;
+        this.deliveryInstructions = deliveryInstructions;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    // Getters and Setters
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
+
+    public UUID getCustomerId() { return customerId; }
+    public void setCustomerId(UUID customerId) { this.customerId = customerId; }
+
+    public OrderStatus getStatus() { return status; }
+    public void setStatus(OrderStatus status) { this.status = status; }
+
+    public BigDecimal getTotalAmount() { return totalAmount; }
+    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
+
+    public String getDeliveryInstructions() { return deliveryInstructions; }
+    public void setDeliveryInstructions(String deliveryInstructions) { this.deliveryInstructions = deliveryInstructions; }
+
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    // Business methods
     public void confirm() {
         if (status != OrderStatus.PENDING) {
             throw new IllegalStateException("Only pending orders can be confirmed");
