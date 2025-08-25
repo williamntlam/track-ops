@@ -39,4 +39,59 @@ public class OrderService implements OrderServicePort {
 
     }
 
+    @Override 
+    public OrderResponse createOrder(CreateOrderRequest request) {
+
+    }
+
+    @Override
+    public OrderResponse getOrderById(UUID orderId) {
+
+    }
+
+    @Override
+    public OrderResponse updateOrderStatus(UUID orderId, OrderStatus newStatus) {
+
+    }
+
+    @Override
+    public OrderResponse cancelOrder(UUID orderId) {
+
+    }
+
+    @Override
+    public List<OrderResponse> getAllOrders() {
+
+    }
+
+    @Override
+    public List<OrderResponse> getOrdersByStatus(OrderStatus status) {
+
+    }
+
+    @Override
+    public List<OrderResponse> getOrdersByCustomerId(UUID customerId) {
+
+    }
+
+    @Override
+    public OrderResponse confirmOrder(UUID orderId) {
+
+    }
+
+    @Override
+    public OrderResponse processOrder(UUID orderId) {
+
+    }
+
+    @Override
+    public OrderResponse shipOrder(UUID orderId) {
+
+    }
+
+    @Override
+    public OrderResponse deliverOrder(UUID orderId) {
+        
+    }
+
 }
