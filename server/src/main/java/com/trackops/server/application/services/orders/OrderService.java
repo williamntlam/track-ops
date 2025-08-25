@@ -67,11 +67,51 @@ public class OrderService implements OrderServicePort {
     @Override
     public OrderResponse getOrderById(UUID orderId) {
 
+        return OrderRepository.findById(orderId);
+
     }
 
     @Override
     public OrderResponse updateOrderStatus(UUID orderId, OrderStatus newStatus) {
-
+        // Step 1: Find the existing order
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
+        
+        // Step 2: Update the order status based on the new status
+        switch (newStatus) {
+            case CONFIRMED:
+                order.confirm();
+                break;
+            case PROCESSING:
+                order.process();
+                break;
+            case SHIPPED:
+                order.ship();
+                break;
+            case DELIVERED:
+                order.deliver();
+                break;
+            case CANCELLED:
+                order.cancel();
+                break;
+            default:
+                throw new InvalidOrderStatusTransitionException("Invalid status: " + newStatus);
+        }
+        
+        // Step 3: Save the updated order
+        Order updatedOrder = orderRepository.save(order);
+        
+        // Step 4: Publish event
+        OrderStatusUpdatedEvent event = new OrderStatusUpdatedEvent(
+            orderId, 
+            order.getStatus(), 
+            newStatus, 
+            updatedOrder.getVersion()
+        );
+        orderEventProducer.publishOrderStatusUpdated(event);
+        
+        // Step 5: Return updated response
+        return orderMapper.orderToOrderResponse(updatedOrder);
     }
 
     @Override
