@@ -1,22 +1,63 @@
+package com.trackops.server.domain.model.orders;
+
 import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.Instant;
 import com.trackops.server.domain.model.enums.OrderStatus;
 import com.trackops.server.domain.model.orders.Address;
+import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 
+@Entity
+@Table(name = "orders")
 public class Order {
+    
+    @Id
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @Column(columnDefinition = "UUID")
     private UUID id;
+    
+    @Column(name = "customer_id", nullable = false)
     private UUID customerId;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private OrderStatus status;
+    
+    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
+    
+    @Embedded
     private Address address; 
+    
+    @Column(name = "delivery_instructions", length = 500)
     private String deliveryInstructions;
+    
+    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+    
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+    
+    @Version
+    private Long version;
 
     // Constructors
     public Order() {}
 
+    // Constructor for NEW orders (no ID, no timestamps)
+    public Order(UUID customerId, OrderStatus status, BigDecimal totalAmount, Address address, String deliveryInstructions) {
+        this.customerId = customerId;
+        this.status = status;
+        this.totalAmount = totalAmount;
+        this.address = address;
+        this.deliveryInstructions = deliveryInstructions;
+        // Let lifecycle hooks handle timestamps
+        // Let JPA handle ID generation
+    }
+
+    // Constructor for EXISTING orders (with ID, timestamps)
     public Order(UUID id, UUID customerId, OrderStatus status, BigDecimal totalAmount, Address address, String deliveryInstructions, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.customerId = customerId;
@@ -52,6 +93,9 @@ public class Order {
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 
     // Business methods
     public void confirm() {
@@ -89,4 +133,21 @@ public class Order {
         this.status = OrderStatus.CANCELLED;
     }
 
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = Instant.now();
+        }
+        if (status == null) {
+            status = OrderStatus.PENDING;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }
