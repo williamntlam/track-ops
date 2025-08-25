@@ -41,22 +41,27 @@ public class OrderService implements OrderServicePort {
 
     @Override 
     public OrderResponse createOrder(CreateOrderRequest request) {
-
-        // Step 1: Parse the data in the CreateOrderRequest
-        // object so that we can feed it into the OrderRepository.
-
+        // Step 1: Parse the data from CreateOrderRequest
         UUID customerId = request.getCustomerId();
         BigDecimal totalAmount = request.getTotalAmount();
-        AddressDTO address = request.getAddress();
+        AddressDTO addressDTO = request.getAddress();
         String deliveryInstructions = request.getDeliveryInstructions();
 
-        OrderRepository.createOrder();
+        // Step 2: Convert AddressDTO to Address domain object
+        Address address = addressDTOToAddress(addressDTO);
 
-        // Step 2: Use OrderRepository to save the created order.
+        // Step 3: Create new Order (let lifecycle hooks handle timestamps)
+        Order newOrder = new Order(customerId, OrderStatus.PENDING, totalAmount, address, deliveryInstructions);
 
-        // Step 3: Create a OrderResponse object, fill it accordingly
-        // and return this OrderResponse object.
+        // Step 4: Save to database and capture the saved order
+        Order savedOrder = orderRepository.save(newOrder);
 
+        // Step 5: Publish event
+        OrderCreatedEvent event = new OrderCreatedEvent(savedOrder.getId(), "system");
+        orderEventProducer.publishOrderCreated(event);
+
+        // Step 6: Return mapped response
+        return orderMapper.orderToOrderResponse(savedOrder);
     }
 
     @Override
