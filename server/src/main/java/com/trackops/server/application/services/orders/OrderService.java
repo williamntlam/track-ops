@@ -1,6 +1,8 @@
 package com.trackops.server.application.services.orders;
 
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.trackops.server.ports.input.orders.OrderServicePort;
 import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import com.trackops.server.ports.output.events.orders.OrderEventProducer;
@@ -268,32 +270,28 @@ public class OrderService implements OrderServicePort {
     }
 
     @Override
-    public List<OrderResponse> getAllOrders() {
+    public Page<OrderResponse> getAllOrders(Pageable pageable) {
         try {
-            // Step 1: Get all orders from repository
-            List<Order> orders = orderRepository.findAll();
-            if (orders == null) {
-                throw new RuntimeException("Repository returned null orders list");
+            // Step 1: Get paginated orders from repository
+            Page<Order> orderPage = orderRepository.findAll(pageable);
+            if (orderPage == null) {
+                throw new RuntimeException("Repository returned null orders page");
             }
             
             // Step 2: Convert each Order to OrderResponse
-            List<OrderResponse> responses = orders.stream()
-                .filter(Objects::nonNull) // Filter out any null orders
-                .map(order -> {
-                    try {
-                        return orderMapper.orderToOrderResponse(order);
-                    } catch (Exception e) {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull) // Filter out any null responses
-                .collect(Collectors.toList());
+            Page<OrderResponse> responsePage = orderPage.map(order -> {
+                try {
+                    return orderMapper.orderToOrderResponse(order);
+                } catch (Exception e) {
+                    return null;
+                }
+            });
             
-            // Step 3: Return the list of responses
-            return responses;
+            // Step 3: Return the paginated responses
+            return responsePage;
             
         } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve all orders: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to retrieve paginated orders: " + e.getMessage(), e);
         }
     }
 
