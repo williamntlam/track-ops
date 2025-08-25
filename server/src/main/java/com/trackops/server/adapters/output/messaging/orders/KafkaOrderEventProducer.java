@@ -1,4 +1,4 @@
-package com.trackops.server.adapters.output.events.orders;
+package com.trackops.server.adapters.output.messaging.orders;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,12 +15,12 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-public class KafkaOrderProducer implements OrderEventProducer {
+public class KafkaOrderEventProducer implements OrderEventProducer {
 
     private final KafkaTemplate<UUID, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
-    public KafkaOrderProducer(KafkaTemplate<UUID, String> kafkaTemplate, ObjectMapper objectMapper) {
+    public KafkaOrderEventProducer(KafkaTemplate<UUID, String> kafkaTemplate, ObjectMapper objectMapper) {
 
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
