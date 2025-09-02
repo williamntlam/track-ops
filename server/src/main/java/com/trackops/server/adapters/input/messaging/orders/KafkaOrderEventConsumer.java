@@ -26,6 +26,32 @@ public class KafkaOrderEventConsumer {
 
     // Your @KafkaListener methods will go here
     // Step 2: Add ORDER_CREATED listener
+
+    public void handleOrderCreated(
+        @Payload String message,
+        @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) UUID orderId,
+        @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+        Acknowledgment acknowledgment) {
+
+            try {
+
+                log.info("Received ORDER_CREATED event for order: {} from {}", orderId, topic);
+                log.debug("Message content: {}", message);
+
+                log.info("Successfully processed ORDER_CREATED event for order {}", orderId);
+
+                acknowledgment.acknowledge();
+
+            } 
+
+            catch(Exception e) {
+
+                log.error("Failed to process ORDER_CREATED event for order: {}", orderId, e);
+
+            }
+
+    }
+
     // Step 3: Add ORDER_STATUS_UPDATED listener  
     // Step 4: Add ORDER_DELIVERED listener
     // Step 5: Add ORDER_CANCELLED listener
