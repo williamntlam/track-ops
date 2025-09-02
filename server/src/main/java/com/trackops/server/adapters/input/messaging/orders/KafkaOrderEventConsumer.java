@@ -27,6 +27,11 @@ public class KafkaOrderEventConsumer {
     // Your @KafkaListener methods will go here
     // Step 2: Add ORDER_CREATED listener
 
+    @KafkaListener(
+        topics = "ORDER_CREATED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
     public void handleOrderCreated(
         @Payload String message,
         @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) UUID orderId,
@@ -53,6 +58,82 @@ public class KafkaOrderEventConsumer {
     }
 
     // Step 3: Add ORDER_STATUS_UPDATED listener  
-    // Step 4: Add ORDER_DELIVERED listener
-    // Step 5: Add ORDER_CANCELLED listener
+    @KafkaListener(
+        topics = "ORDER_STATUS_UPDATED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleOrderStatusUpdated(
+        @Payload String message,
+        @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) UUID orderId,
+        @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+        Acknowledgment acknowledgment 
+    ) {
+        try {
+            log.info("Received ORDER_STATUS_UPDATED event for order: {} from topic: {}", orderId, topic);
+            
+            log.debug("Message content: {}", message);
+            
+            
+            log.info("Successfully processed ORDER_STATUS_UPDATED event for order: {}", orderId);
+            
+            acknowledgment.acknowledge();
+            
+        } catch (Exception e) {
+            log.error("Failed to process ORDER_STATUS_UPDATED event for order: {}", orderId, e);
+        }
+    }
+
+    @KafkaListener(
+        topics = "ORDER_DELIVERED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleOrderDelivered(
+            @Payload String message,
+            @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) UUID orderId,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            Acknowledgment acknowledgment) {
+        
+        try {
+            log.info("Received ORDER_DELIVERED event for order: {} from topic: {}", orderId, topic);
+            
+            log.debug("Message content: {}", message);
+            
+            
+            log.info("Successfully processed ORDER_DELIVERED event for order: {}", orderId);
+            
+            acknowledgment.acknowledge();
+            
+        } catch (Exception e) {
+            log.error("Failed to process ORDER_DELIVERED event for order: {}", orderId, e);
+        }
+    }
+
+    @KafkaListener(
+        topics = "ORDER_CANCELLED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleOrderCancelled(
+            @Payload String message,
+            @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) UUID orderId,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            Acknowledgment acknowledgment) {
+        
+        try {
+            log.info("Received ORDER_CANCELLED event for order: {} from topic: {}", orderId, topic);
+            
+            log.debug("Message content: {}", message);
+            
+            
+            log.info("Successfully processed ORDER_CANCELLED event for order: {}", orderId);
+            
+            acknowledgment.acknowledge();
+            
+        } catch (Exception e) {
+            log.error("Failed to process ORDER_CANCELLED event for order: {}", orderId, e);
+            // Don't acknowledge on error - let Kafka retry
+        }
+    }
 }
