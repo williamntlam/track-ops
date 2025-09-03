@@ -114,7 +114,10 @@ public class KafkaOrderEventConsumer {
             
             log.debug("Message content: {}", message);
             
+            OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
             
+            orderEventProcessor.processOrderEvent(event);
+
             log.info("Successfully processed ORDER_DELIVERED event for order: {}", orderId);
             
             acknowledgment.acknowledge();
