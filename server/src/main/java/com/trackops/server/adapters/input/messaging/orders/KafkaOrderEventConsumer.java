@@ -51,6 +51,11 @@ public class KafkaOrderEventConsumer {
 
                 log.info("Successfully processed ORDER_CREATED event for order {}", orderId);
 
+                OrderCreatedEvent event = objectMapper.readValue(message, OrderCreatedEvent.class);
+
+                orderEventProcessor.processOrderEvent(event);
+
+                log.info("Successfully processed ORDER_CREATED event for order {}", orderId);
                 acknowledgment.acknowledge();
 
             } 
