@@ -85,7 +85,10 @@ public class KafkaOrderEventConsumer {
             
             log.debug("Message content: {}", message);
             
+            OrderStatusUpdatedEvent event = ObjectMapper.readValue(message, OrderStatusUpdatedEvent.class);
             
+            orderEventProcessor.processOrderEvent(event);
+
             log.info("Successfully processed ORDER_STATUS_UPDATED event for order: {}", orderId);
             
             acknowledgment.acknowledge();
