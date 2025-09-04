@@ -44,28 +44,24 @@ public class KafkaOrderEventConsumer {
         @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
         Acknowledgment acknowledgment) {
 
-            try {
+        try {
+            log.info("Received ORDER_CREATED event for order: {} from topic: {}", orderId, topic);
+            log.debug("Message content: {}", message);
 
-                log.info("Received ORDER_CREATED event for order: {} from {}", orderId, topic);
-                log.debug("Message content: {}", message);
+            OrderCreatedEvent event = objectMapper.readValue(message, OrderCreatedEvent.class);
+            orderEventProcessor.processOrderEvent(event);
 
-                log.info("Successfully processed ORDER_CREATED event for order {}", orderId);
+            log.info("Successfully processed ORDER_CREATED event for order: {}", orderId);
+            acknowledgment.acknowledge();
 
-                OrderCreatedEvent event = objectMapper.readValue(message, OrderCreatedEvent.class);
-
-                orderEventProcessor.processOrderEvent(event);
-
-                log.info("Successfully processed ORDER_CREATED event for order {}", orderId);
-                acknowledgment.acknowledge();
-
-            } 
-
-            catch(Exception e) {
-
-                log.error("Failed to process ORDER_CREATED event for order: {}", orderId, e);
-
-            }
-
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize ORDER_CREATED event for order: {} - Invalid JSON format", orderId, e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
+        } catch (Exception e) {
+            log.error("Failed to process ORDER_CREATED event for order: {}", orderId, e);
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
+        }
     }
 
     // Step 3: Add ORDER_STATUS_UPDATED listener  
@@ -82,19 +78,21 @@ public class KafkaOrderEventConsumer {
     ) {
         try {
             log.info("Received ORDER_STATUS_UPDATED event for order: {} from topic: {}", orderId, topic);
-            
             log.debug("Message content: {}", message);
             
-            OrderStatusUpdatedEvent event = ObjectMapper.readValue(message, OrderStatusUpdatedEvent.class);
-            
+            OrderStatusUpdatedEvent event = objectMapper.readValue(message, OrderStatusUpdatedEvent.class);
             orderEventProcessor.processOrderEvent(event);
 
             log.info("Successfully processed ORDER_STATUS_UPDATED event for order: {}", orderId);
-            
             acknowledgment.acknowledge();
             
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize ORDER_STATUS_UPDATED event for order: {} - Invalid JSON format", orderId, e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_STATUS_UPDATED event for order: {}", orderId, e);
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
         }
     }
 
@@ -111,19 +109,21 @@ public class KafkaOrderEventConsumer {
         
         try {
             log.info("Received ORDER_DELIVERED event for order: {} from topic: {}", orderId, topic);
-            
             log.debug("Message content: {}", message);
             
-            OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
-            
+            OrderDeliveredEvent event = objectMapper.readValue(message, OrderDeliveredEvent.class);
             orderEventProcessor.processOrderEvent(event);
 
             log.info("Successfully processed ORDER_DELIVERED event for order: {}", orderId);
-            
             acknowledgment.acknowledge();
             
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize ORDER_DELIVERED event for order: {} - Invalid JSON format", orderId, e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_DELIVERED event for order: {}", orderId, e);
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
         }
     }
 
@@ -140,17 +140,21 @@ public class KafkaOrderEventConsumer {
         
         try {
             log.info("Received ORDER_CANCELLED event for order: {} from topic: {}", orderId, topic);
-            
             log.debug("Message content: {}", message);
             
+            OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
+            orderEventProcessor.processOrderEvent(event);
             
             log.info("Successfully processed ORDER_CANCELLED event for order: {}", orderId);
-            
             acknowledgment.acknowledge();
             
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize ORDER_CANCELLED event for order: {} - Invalid JSON format", orderId, e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_CANCELLED event for order: {}", orderId, e);
-            // Don't acknowledge on error - let Kafka retry
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
         }
     }
 }

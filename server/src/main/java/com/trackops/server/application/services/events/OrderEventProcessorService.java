@@ -34,6 +34,9 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
     public void processOrderEvent(OrderEvent event) {
         
         try {
+            // Validate input event
+            validateEvent(event);
+            
             UUID eventId = event.getEventId();
             UUID orderId = event.getOrderId();
 
@@ -68,7 +71,26 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
             log.error("Failed to process order event: {}", event.getEventId(), e);
             throw new RuntimeException("Failed to process order event", e);
         }
+    }
 
+    private void validateEvent(OrderEvent event) {
+        if (event == null) {
+            throw new IllegalArgumentException("Order event cannot be null");
+        }
+        
+        if (event.getEventId() == null) {
+            throw new IllegalArgumentException("Event ID cannot be null");
+        }
+        
+        if (event.getOrderId() == null) {
+            throw new IllegalArgumentException("Order ID cannot be null");
+        }
+        
+        if (event.getEventType() == null) {
+            throw new IllegalArgumentException("Event type cannot be null");
+        }
+        
+        log.debug("Event validation passed for event: {} of type: {}", event.getEventId(), event.getEventType());
     }
 
 }
