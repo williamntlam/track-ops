@@ -14,4 +14,6 @@ import java.util.UUID;
 @Service
 public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
     
+    
+
 }
