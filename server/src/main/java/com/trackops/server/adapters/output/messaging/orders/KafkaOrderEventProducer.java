@@ -2,6 +2,7 @@ package com.trackops.server.adapters.output.messaging.orders;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trackops.server.domain.model.OperationResult;
 import com.trackops.server.domain.events.orders.OrderCancelledEvent;
 import com.trackops.server.domain.events.orders.OrderCreatedEvent;
 import com.trackops.server.domain.events.orders.OrderDeliveredEvent;
@@ -28,51 +29,44 @@ public class KafkaOrderEventProducer implements OrderEventProducer {
     }
 
     @Override
-    public void publishOrderCreated(OrderCreatedEvent event) {
-        
-        publishEvent(event);
-
+    public OperationResult publishOrderCreated(OrderCreatedEvent event) {
+        return publishEvent(event);
     }
 
     @Override
-    public void publishOrderStatusUpdated(OrderStatusUpdatedEvent event) {
-        
-        publishEvent(event);
-
+    public OperationResult publishOrderStatusUpdated(OrderStatusUpdatedEvent event) {
+        return publishEvent(event);
     }
 
     @Override
-    public void publishOrderDelivered(OrderDeliveredEvent event) {
-        
-        publishEvent(event);
-
+    public OperationResult publishOrderDelivered(OrderDeliveredEvent event) {
+        return publishEvent(event);
     }
 
     @Override
-    public void publishOrderCancelled(OrderCancelledEvent event) {
-        
-        publishEvent(event);
-
+    public OperationResult publishOrderCancelled(OrderCancelledEvent event) {
+        return publishEvent(event);
     }
 
-    private void publishEvent(OrderEvent event) {
-
+    private OperationResult publishEvent(OrderEvent event) {
         try {
-
             String topic = event.getEventType();
             UUID key = event.getOrderId();
             String value = objectMapper.writeValueAsString(event);
 
             kafkaTemplate.send(topic, key, value);
+            log.debug("Successfully published event {} for order {}", event.getEventType(), event.getOrderId());
+            return OperationResult.success();
 
         } catch (JsonProcessingException err) {
-
             log.error("Failed to serialize event for order {}: {}", 
                     event.getOrderId(), err.getMessage(), err);
-            throw new RuntimeException("Failed to serialize event", err);
-
-        } 
-
+            return OperationResult.failure("Failed to serialize event: " + err.getMessage());
+        } catch (Exception err) {
+            log.error("Failed to publish event for order {}: {}", 
+                    event.getOrderId(), err.getMessage(), err);
+            return OperationResult.failure("Failed to publish event: " + err.getMessage());
+        }
     }
 
 }

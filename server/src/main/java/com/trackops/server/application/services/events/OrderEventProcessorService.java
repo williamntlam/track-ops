@@ -6,6 +6,7 @@ import com.trackops.server.domain.events.orders.OrderEvent;
 import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
 import com.trackops.server.ports.output.cache.IdempotencyCachePort; 
+import com.trackops.server.domain.model.CacheOperationResult;
 import com.trackops.server.domain.model.events.ProcessedEvent;
 import com.trackops.server.domain.model.orders.Order;
 import com.trackops.server.domain.model.enums.EventType;
@@ -65,7 +66,11 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
             processedEventRepository.save(processedEvent);
 
             // Step Four: Mark as processed in idempotency cache
-            idempotencyCachePort.markEventProcessed(eventId, Duration.ofHours(24));
+            CacheOperationResult cacheResult = idempotencyCachePort.markEventProcessed(eventId, Duration.ofHours(24));
+            if (cacheResult.isFailure()) {
+                log.warn("Failed to mark event {} as processed in cache: {}", eventId, cacheResult.getErrorMessage());
+                // Don't fail the entire operation, just log the warning
+            }
 
         } catch (Exception e) {
             log.error("Failed to process order event: {}", event.getEventId(), e);

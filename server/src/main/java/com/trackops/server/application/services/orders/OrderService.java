@@ -12,6 +12,7 @@ import com.trackops.server.adapters.input.web.dto.UpdateOrderStatusRequest;
 import com.trackops.server.adapters.input.web.dto.OrderResponse;
 import com.trackops.server.adapters.input.web.dto.OrderListResponse;
 import com.trackops.server.adapters.input.web.dto.AddressDTO;
+import com.trackops.server.domain.model.OperationResult;
 import com.trackops.server.domain.model.orders.Order;
 import com.trackops.server.domain.model.orders.Address;
 import com.trackops.server.domain.model.enums.OrderStatus;
@@ -81,7 +82,12 @@ public class OrderService implements OrderServicePort {
             // Step 6: Publish event
             try {
                 OrderCreatedEvent event = new OrderCreatedEvent(savedOrder.getId(), "system");
-                orderEventProducer.publishOrderCreated(event);
+                OperationResult publishResult = orderEventProducer.publishOrderCreated(event);
+                if (publishResult.isFailure()) {
+                    // Log the event publishing failure but don't fail the order creation
+                    // Consider adding a fallback mechanism or retry logic
+                    // You might want to add logging here
+                }
             } catch (Exception e) {
                 // Log the event publishing failure but don't fail the order creation
                 // You might want to add logging here
@@ -196,7 +202,12 @@ public class OrderService implements OrderServicePort {
                     newStatus, 
                     updatedOrder.getVersion()
                 );
-                orderEventProducer.publishOrderStatusUpdated(event);
+                OperationResult publishResult = orderEventProducer.publishOrderStatusUpdated(event);
+                if (publishResult.isFailure()) {
+                    // Log the event publishing failure but don't fail the status update
+                    // Consider adding logging here
+                    // The order was successfully updated, so we continue
+                }
             } catch (Exception e) {
                 // Log the event publishing failure but don't fail the status update
                 // Consider adding logging here
@@ -249,7 +260,10 @@ public class OrderService implements OrderServicePort {
                     "system", // or get from security context
                     "Order cancelled by system" // or get from request
                 );
-                orderEventProducer.publishOrderCancelled(event);
+                OperationResult publishResult = orderEventProducer.publishOrderCancelled(event);
+                if (publishResult.isFailure()) {
+                    // Log error but don't fail the cancellation
+                }
             } catch (Exception e) {
                 // Log error but don't fail the cancellation
             }
@@ -385,7 +399,10 @@ public class OrderService implements OrderServicePort {
                     OrderStatus.CONFIRMED, 
                     updatedOrder.getVersion()
                 );
-                orderEventProducer.publishOrderStatusUpdated(event);
+                OperationResult publishResult = orderEventProducer.publishOrderStatusUpdated(event);
+                if (publishResult.isFailure()) {
+                    // Log error but don't fail the confirmation
+                }
             } catch (Exception e) {
                 // Log error but don't fail the confirmation
             }
@@ -435,7 +452,10 @@ public class OrderService implements OrderServicePort {
                     OrderStatus.PROCESSING, 
                     updatedOrder.getVersion()
                 );
-                orderEventProducer.publishOrderStatusUpdated(event);
+                OperationResult publishResult = orderEventProducer.publishOrderStatusUpdated(event);
+                if (publishResult.isFailure()) {
+                    // Log error but don't fail the confirmation
+                }
             } catch (Exception e) {
                 // Log error but don't fail the processing
             }
@@ -485,7 +505,10 @@ public class OrderService implements OrderServicePort {
                     OrderStatus.SHIPPED, 
                     updatedOrder.getVersion()
                 );
-                orderEventProducer.publishOrderStatusUpdated(event);
+                OperationResult publishResult = orderEventProducer.publishOrderStatusUpdated(event);
+                if (publishResult.isFailure()) {
+                    // Log error but don't fail the confirmation
+                }
             } catch (Exception e) {
                 // Log error but don't fail the shipping
             }
@@ -533,7 +556,10 @@ public class OrderService implements OrderServicePort {
                     orderId, 
                     LocalDateTime.now() // or get from request
                 );
-                orderEventProducer.publishOrderDelivered(event);
+                OperationResult publishResult = orderEventProducer.publishOrderDelivered(event);
+                if (publishResult.isFailure()) {
+                    // Log error but don't fail the delivery
+                }
             } catch (Exception e) {
                 // Log error but don't fail the delivery
             }

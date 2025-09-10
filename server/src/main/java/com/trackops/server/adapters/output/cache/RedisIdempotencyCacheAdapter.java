@@ -1,5 +1,6 @@
 package com.trackops.server.adapters.output.cache;
 
+import com.trackops.server.domain.model.CacheOperationResult;
 import com.trackops.server.ports.output.cache.IdempotencyCachePort;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -30,12 +31,15 @@ public class RedisIdempotencyCacheAdapter implements IdempotencyCachePort {
     }
 
     @Override
-    public void markEventProcessed(UUID eventId, Duration ttl) {
+    public CacheOperationResult markEventProcessed(UUID eventId, Duration ttl) {
         try {
             String key = "processed_event:" + eventId;
             redisTemplate.opsForValue().set(key, "true", ttl);
+            log.debug("Successfully marked event {} as processed", eventId);
+            return CacheOperationResult.success();
         } catch (Exception e) {
             log.error("Failed to mark event {} as processed", eventId, e);
+            return CacheOperationResult.failure("Failed to mark event as processed: " + e.getMessage());
         }
     }
 
