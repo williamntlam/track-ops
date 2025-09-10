@@ -1,6 +1,7 @@
 package com.trackops.server.adapters.output.cache;
 
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
+import com.trackops.server.domain.model.CacheOperationResult;
 import com.trackops.server.domain.model.enums.OrderStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -14,6 +15,56 @@ import java.util.UUID;
 @Service
 public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
     
+    private static final Logger logger = LoggerFactory.getLogger(RedisOrderStatusCacheAdapter.class);
     
+    public CacheOperationResult cacheOrderStatus(UUID orderId, OrderStatus status, Duration ttl) {
+        try {
+            // TODO: Implement Redis caching logic
+            return CacheOperationResult.success();
+        } catch (Exception e) {
+            logger.error("Failed to cache order status for orderId: {}", orderId, e);
+            return CacheOperationResult.failure("Failed to cache order status: " + e.getMessage());
+        }
+    }
+
+    public Optional<OrderStatus> getOrderStatus(UUID orderId) {
+        try {
+            // TODO: Implement Redis retrieval logic
+            return Optional.empty();
+        } catch (Exception e) {
+            logger.error("Failed to get order status for orderId: {}", orderId, e);
+            return Optional.empty();
+        }
+    }
+
+    public CacheOperationResult removeOrderStatus(UUID orderId) {
+        try {
+            // TODO: Implement Redis removal logic
+            return CacheOperationResult.success();
+        } catch (Exception e) {
+            logger.error("Failed to remove order status for orderId: {}", orderId, e);
+            return CacheOperationResult.failure("Failed to remove order status: " + e.getMessage());
+        }
+    }
+
+    public boolean hasOrderStatus(UUID orderId) {
+        try {
+            // TODO: Implement Redis existence check logic
+            return false;
+        } catch (Exception e) {
+            logger.error("Failed to check order status existence for orderId: {}", orderId, e);
+            return false;
+        }
+    }
+
+    public CacheOperationResult updateOrderStatus(UUID orderId, OrderStatus newStatus, Duration ttl) {
+        try {
+            // TODO: Implement Redis update logic
+            return CacheOperationResult.success();
+        } catch (Exception e) {
+            logger.error("Failed to update order status for orderId: {}", orderId, e);
+            return CacheOperationResult.failure("Failed to update order status: " + e.getMessage());
+        }
+    }
 
 }
