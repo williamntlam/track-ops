@@ -23,6 +23,7 @@ import com.trackops.server.domain.events.orders.OrderDeliveredEvent;
 import com.trackops.server.domain.exceptions.OrderNotFoundException;
 import com.trackops.server.domain.exceptions.OrderValidationException;
 import com.trackops.server.domain.exceptions.InvalidOrderStatusTransitionException;
+import com.trackops.server.application.services.saga.SagaOrchestratorService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,11 +38,14 @@ public class OrderService implements OrderServicePort {
     private final OrderRepository orderRepository;
     private final OrderEventProducer orderEventProducer;
     private final OrderMapper orderMapper;
+    private final SagaOrchestratorService sagaOrchestratorService;
 
-    public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, OrderMapper orderMapper) {
+    public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
+                       OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
+        this.sagaOrchestratorService = sagaOrchestratorService;
     }
 
     @Override 
@@ -243,35 +247,18 @@ public class OrderService implements OrderServicePort {
             Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-            // Step 3: Use the business method (this handles validation and business rules)
-            OrderStatus previousStatus = order.getStatus();
-            order.cancel(); // This method has business logic and validation!
-
-            // Step 4: Save the updated order
-            Order updatedOrder = orderRepository.save(order);
-            if (updatedOrder == null) {
-                throw new RuntimeException("Failed to save cancelled order to database");
+            // Step 3: Validate order can be cancelled
+            if (order.getStatus() == OrderStatus.DELIVERED) {
+                throw new OrderValidationException("Delivered orders cannot be cancelled");
             }
 
-            // Step 5: Publish event
-            try {
-                OrderCancelledEvent event = new OrderCancelledEvent(
-                    orderId, 
-                    "system", // or get from security context
-                    "Order cancelled by system" // or get from request
-                );
-                OperationResult publishResult = orderEventProducer.publishOrderCancelled(event);
-                if (publishResult.isFailure()) {
-                    // Log error but don't fail the cancellation
-                }
-            } catch (Exception e) {
-                // Log error but don't fail the cancellation
-            }
+            // Step 4: Start SAGA for order cancellation
+            UUID sagaId = sagaOrchestratorService.startOrderCancellationSaga(orderId);
 
-            // Step 6: Return updated response
-            OrderResponse response = orderMapper.orderToOrderResponse(updatedOrder);
+            // Step 5: Return current order response (SAGA will handle the rest asynchronously)
+            OrderResponse response = orderMapper.orderToOrderResponse(order);
             if (response == null) {
-                throw new RuntimeException("Failed to map cancelled order to response");
+                throw new RuntimeException("Failed to map order to response");
             }
 
             return response;
@@ -381,36 +368,18 @@ public class OrderService implements OrderServicePort {
             Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
             
-            // Step 3: Use business method (handles validation and business rules)
-            OrderStatus previousStatus = order.getStatus();
-            order.confirm(); // This validates and changes status to CONFIRMED
-            
-            // Step 4: Save the updated order
-            Order updatedOrder = orderRepository.save(order);
-            if (updatedOrder == null) {
-                throw new RuntimeException("Failed to save confirmed order to database");
+            // Step 3: Validate order can be confirmed
+            if (order.getStatus() != OrderStatus.PENDING) {
+                throw new OrderValidationException("Only PENDING orders can be confirmed");
             }
             
-            // Step 5: Publish event
-            try {
-                OrderStatusUpdatedEvent event = new OrderStatusUpdatedEvent(
-                    orderId, 
-                    previousStatus, 
-                    OrderStatus.CONFIRMED, 
-                    updatedOrder.getVersion()
-                );
-                OperationResult publishResult = orderEventProducer.publishOrderStatusUpdated(event);
-                if (publishResult.isFailure()) {
-                    // Log error but don't fail the confirmation
-                }
-            } catch (Exception e) {
-                // Log error but don't fail the confirmation
-            }
+            // Step 4: Start SAGA for order processing
+            UUID sagaId = sagaOrchestratorService.startOrderProcessingSaga(orderId);
             
-            // Step 6: Return updated response
-            OrderResponse response = orderMapper.orderToOrderResponse(updatedOrder);
+            // Step 5: Return current order response (SAGA will handle the rest asynchronously)
+            OrderResponse response = orderMapper.orderToOrderResponse(order);
             if (response == null) {
-                throw new RuntimeException("Failed to map confirmed order to response");
+                throw new RuntimeException("Failed to map order to response");
             }
             
             return response;
