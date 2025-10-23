@@ -4,6 +4,8 @@ import com.trackops.server.domain.model.enums.OrderStatus;
 import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import com.trackops.server.domain.model.orders.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -37,8 +39,18 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public List<Order> findByCustomerId(UUID customerId) {
+        return orderJpaRepository.findByCustomerId(customerId);
+    }
+
+    @Override
     public List<Order> findAll() {
         return orderJpaRepository.findAll();
+    }
+
+    @Override
+    public Page<Order> findAll(Pageable pageable) {
+        return orderJpaRepository.findAll(pageable);
     }
 
     @Override

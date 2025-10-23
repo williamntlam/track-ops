@@ -1,4 +1,4 @@
-import com.trackops.server.domain.model.enums.EventType;
+package com.trackops.server.domain.model.enums;
 
 public enum EventType {
     ORDER_CREATED("ORDER_CREATED"),

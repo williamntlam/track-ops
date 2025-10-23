@@ -1,7 +1,7 @@
 package com.trackops.server.adapters.input.web.dto;
 
 import java.util.UUID;
-import java.util.BigDecimal;
+import java.math.BigDecimal;
 import com.trackops.server.adapters.input.web.dto.AddressDTO;
 
 import jakarta.validation.constraints.NotNull;

@@ -47,7 +47,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateOrderStatusRequest request) {
-        OrderResponse response = orderService.updateOrderStatus(id, request.getStatus());
+        OrderResponse response = orderService.updateOrderStatus(id, request.getNewStatus());
         return ResponseEntity.ok(response);
     }
 

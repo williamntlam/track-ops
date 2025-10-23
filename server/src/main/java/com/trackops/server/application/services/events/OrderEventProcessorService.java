@@ -58,7 +58,7 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
             ProcessedEvent processedEvent = ProcessedEvent.createForOrderEvent(
                 eventId,
                 orderId,
-                event.getEventType(),
+                EventType.valueOf(event.getEventType()),
                 processedOrder.getStatus(), 
                 "order-processor",
                 0L

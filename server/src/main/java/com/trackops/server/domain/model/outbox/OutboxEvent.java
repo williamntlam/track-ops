@@ -104,7 +104,6 @@ public class OutboxEvent {
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     
-    public boolean isProcessed() { return processed; }
     public void setProcessed(boolean processed) { this.processed = processed; }
     
     public Instant getProcessedAt() { return processedAt; }
