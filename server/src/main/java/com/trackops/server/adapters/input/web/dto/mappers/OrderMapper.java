@@ -4,9 +4,11 @@ import com.trackops.server.adapters.input.web.dto.AddressDTO;
 import com.trackops.server.adapters.input.web.dto.CreateOrderRequest;
 import com.trackops.server.domain.model.orders.Order;
 import com.trackops.server.domain.model.orders.Address;
+import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Component
 public class OrderMapper {
 
     // Order Object to OrderResponse

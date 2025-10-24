@@ -9,10 +9,11 @@ import java.util.UUID;
 import java.util.List;
 
 @Repository
-public interface ProcessedEventJpaRepository extends JpaRepository<ProcessedEvent, UUID> {
+public interface ProcessedEventJpaRepository extends JpaRepository<ProcessedEvent, String> {
 
-    Optional<ProcessedEvent> findByEventId(UUID eventId);
+    Optional<ProcessedEvent> findByEventId(String eventId);
 
-    List<ProcessedEvent> findByOrderId(UUID orderId);
+
+    List<ProcessedEvent> findByOrderId(Long orderId);
 
 }

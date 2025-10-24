@@ -25,22 +25,22 @@ public class ProcessedEventRepositoryAdapter implements ProcessedEventRepository
     }
 
     @Override
-    public Optional<ProcessedEvent> findByEventId(UUID eventId) {
+    public Optional<ProcessedEvent> findByEventId(String eventId) {
         return processedEventJpaRepository.findByEventId(eventId);
     }
 
     @Override
-    public Optional<ProcessedEvent> findByOrderId(UUID orderId) {
+    public Optional<ProcessedEvent> findByOrderId(Long orderId) {
         return processedEventJpaRepository.findByOrderId(orderId).stream().findFirst();
     }
 
     @Override
-    public boolean existsByEventId(UUID eventId) {
+    public boolean existsByEventId(String eventId) {
         return processedEventJpaRepository.findByEventId(eventId).isPresent();
     }
 
     @Override
-    public void deleteByEventId(UUID eventId) {
+    public void deleteByEventId(String eventId) {
         processedEventJpaRepository.findByEventId(eventId).ifPresent(processedEventJpaRepository::delete);
     }
 

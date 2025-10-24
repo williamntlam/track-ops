@@ -7,8 +7,8 @@ import java.util.UUID;
 public interface ProcessedEventRepository {
 
     ProcessedEvent save(ProcessedEvent processedEvent);
-    Optional<ProcessedEvent> findByEventId(UUID eventId);
-    Optional<ProcessedEvent> findByOrderId(UUID orderId);  // Add this line
-    boolean existsByEventId(UUID eventId);
-    void deleteByEventId(UUID eventId);
+    Optional<ProcessedEvent> findByEventId(String eventId);
+    Optional<ProcessedEvent> findByOrderId(Long orderId);
+    boolean existsByEventId(String eventId);
+    void deleteByEventId(String eventId);
 }
