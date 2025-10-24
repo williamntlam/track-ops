@@ -1,7 +1,6 @@
 package com.trackops.server.domain.model.saga;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,7 +13,6 @@ public class SagaInstance {
     
     @Id
     @GeneratedValue(generator = "uuid2")
-    @GenericGenerator(name = "uuid2", strategy = "uuid2")
     @Column(columnDefinition = "UUID")
     private UUID id;
     

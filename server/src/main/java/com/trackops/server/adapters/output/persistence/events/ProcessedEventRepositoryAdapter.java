@@ -5,10 +5,7 @@ import com.trackops.server.ports.output.persistence.events.ProcessedEventReposit
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
-import java.util.UUID;
-import java.util.List;
 
-import com.trackops.server.adapters.output.persistence.events.ProcessedEventJpaRepository;
 
 @Repository
 public class ProcessedEventRepositoryAdapter implements ProcessedEventRepository {

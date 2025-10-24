@@ -2,9 +2,6 @@ package com.trackops.server.application.services.saga;
 
 import com.trackops.server.domain.model.saga.*;
 import com.trackops.server.ports.output.persistence.saga.SagaRepository;
-import com.trackops.server.ports.output.events.orders.OrderEventProducer;
-import com.trackops.server.domain.events.orders.OrderStatusUpdatedEvent;
-import com.trackops.server.domain.model.enums.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,14 +16,11 @@ public class SagaOrchestratorService {
     private static final Logger log = LoggerFactory.getLogger(SagaOrchestratorService.class);
     
     private final SagaRepository sagaRepository;
-    private final OrderEventProducer orderEventProducer;
     private final OrderSagaStepExecutor orderSagaStepExecutor;
 
     public SagaOrchestratorService(SagaRepository sagaRepository, 
-                                 OrderEventProducer orderEventProducer,
                                  OrderSagaStepExecutor orderSagaStepExecutor) {
         this.sagaRepository = sagaRepository;
-        this.orderEventProducer = orderEventProducer;
         this.orderSagaStepExecutor = orderSagaStepExecutor;
     }
 
