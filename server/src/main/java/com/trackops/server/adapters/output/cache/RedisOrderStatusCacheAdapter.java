@@ -4,6 +4,7 @@ import com.trackops.server.ports.output.cache.OrderStatusCachePort;
 import com.trackops.server.domain.model.CacheOperationResult;
 import com.trackops.server.domain.model.enums.OrderStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.connection.SortParameters.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,20 @@ public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
 
     public Optional<OrderStatus> getOrderStatus(UUID orderId) {
         try {
-            // TODO: Implement Redis retrieval logic
+            String key = getOrderStatusKey(orderId);
+            String value = redisTemplate.opsForValue().get(key);
+
+            if (value == null) {
+                logger.debug("Order status not found in cache for orderId: {}", orderId);
+                return Optional.empty();
+            }
+
+            OrderStatus status = OrderStatus.valueOf(value);
+            logger.debug("Retrieved order status from cache for orderId: {} with status: {}", orderId, status);
+            return Optional.of(status);
+        
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid order status value in cache for orderId: {} - value: {}", orderId, e.getMessage());
             return Optional.empty();
         } catch (Exception e) {
             logger.error("Failed to get order status for orderId: {}", orderId, e);
