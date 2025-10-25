@@ -116,7 +116,17 @@ public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
 
     public CacheOperationResult updateOrderStatus(UUID orderId, OrderStatus newStatus, Duration ttl) {
         try {
-            // TODO: Implement Redis update logic
+
+            String key = getOrderStatusKey(orderId);
+            String value = newStatus.name();
+            
+            if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
+                redisTemplate.opsForValue().set(key, value, ttl);
+            } else {
+                redisTemplate.opsForValue().set(key, value);
+            }
+
+            logger.debug("Successfully updated order status in cache for orderId: {} with status: {}", orderId, newStatus);
             return CacheOperationResult.success();
         } catch (Exception e) {
             logger.error("Failed to update order status for orderId: {}", orderId, e);
