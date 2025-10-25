@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.trackops.server.adapters.output.health.DatabaseHealthIndicator;
 import com.trackops.server.adapters.output.health.RedisHealthIndicator;
 import com.trackops.server.adapters.output.health.KafkaHealthIndicator;
@@ -33,28 +34,30 @@ public class HealthController {
     
     private final HealthIndicator databaseHealthIndicator;
     private final HealthIndicator redisHealthIndicator;
-    private final HealthIndicator kafkaHealthIndicator;
     private final HealthIndicator applicationHealthIndicator;
+    private final KafkaHealthIndicator kafkaHealthIndicator;
     
     public HealthController(
             DatabaseHealthIndicator databaseHealthIndicator,
             RedisHealthIndicator redisHealthIndicator,
-            KafkaHealthIndicator kafkaHealthIndicator,
-            ApplicationHealthIndicator applicationHealthIndicator) {
+            ApplicationHealthIndicator applicationHealthIndicator,
+            @Autowired(required = false) KafkaHealthIndicator kafkaHealthIndicator) {
         this.databaseHealthIndicator = databaseHealthIndicator;
         this.redisHealthIndicator = redisHealthIndicator;
-        this.kafkaHealthIndicator = kafkaHealthIndicator;
         this.applicationHealthIndicator = applicationHealthIndicator;
+        this.kafkaHealthIndicator = kafkaHealthIndicator;
     }
     
     /**
      * Helper method to check if all critical services are healthy.
-     * Critical services: Database, Redis, Kafka
+     * Critical services: Database, Redis, Kafka (if available)
      */
     private boolean areCriticalServicesHealthy() {
-        return isHealthy(databaseHealthIndicator) && 
-               isHealthy(redisHealthIndicator) && 
-               isHealthy(kafkaHealthIndicator);
+        boolean dbHealthy = isHealthy(databaseHealthIndicator);
+        boolean redisHealthy = isHealthy(redisHealthIndicator);
+        boolean kafkaHealthy = (kafkaHealthIndicator == null) || isHealthy(kafkaHealthIndicator);
+        
+        return dbHealthy && redisHealthy && kafkaHealthy;
     }
     
     /**
@@ -115,7 +118,8 @@ public class HealthController {
         // Get health status safely for all components
         Health dbHealth = getHealthSafely(databaseHealthIndicator);
         Health redisHealth = getHealthSafely(redisHealthIndicator);
-        Health kafkaHealth = getHealthSafely(kafkaHealthIndicator);
+        Health kafkaHealth = (kafkaHealthIndicator != null) ? getHealthSafely(kafkaHealthIndicator) : 
+            Health.down().withDetail("error", "Kafka not configured").build();
         Health appHealth = getHealthSafely(applicationHealthIndicator);
         
         // Build component status map with both status and details

@@ -25,7 +25,7 @@ public class ApplicationHealthIndicator implements HealthIndicator {
     @Value("${spring.application.name:trackops-server}")
     private String applicationName;
     
-    @Value("${spring.profiles.active:default}")
+    @Value("${spring.profiles.active:#{null}}")
     private String activeProfile;
     
     private final Instant startTime = Instant.now();
@@ -55,10 +55,17 @@ public class ApplicationHealthIndicator implements HealthIndicator {
             long freeMemory = Runtime.getRuntime().freeMemory();
             long maxMemory = Runtime.getRuntime().maxMemory();
             
+            String version = getClass().getPackage().getImplementationVersion();
+            if (version == null) {
+                version = "1.0.0"; // Default version if not available
+            }
+            
+            String profile = (activeProfile != null) ? activeProfile : "default";
+            
             Health.Builder healthBuilder = Health.up()
                 .withDetail("application", applicationName)
-                .withDetail("profile", activeProfile)
-                .withDetail("version", getClass().getPackage().getImplementationVersion())
+                .withDetail("profile", profile)
+                .withDetail("version", version)
                 .withDetail("uptime", formatDuration(uptime))
                 .withDetail("uptimeMillis", uptimeMillis)
                 .withDetail("jvm", runtimeBean.getVmName() + " " + runtimeBean.getVmVersion())

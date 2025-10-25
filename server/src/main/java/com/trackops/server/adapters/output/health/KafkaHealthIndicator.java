@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.KafkaAdmin;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +18,7 @@ import java.util.Map;
  * topic availability, and message publishing capabilities.
  */
 @Component
+@ConditionalOnBean(KafkaTemplate.class)
 public class KafkaHealthIndicator implements HealthIndicator {
     
     private static final Logger logger = LoggerFactory.getLogger(KafkaHealthIndicator.class);
