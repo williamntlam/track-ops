@@ -576,6 +576,7 @@ public class OrderService implements OrderServicePort {
             } catch (Exception e) {
                 // Log error but don't fail the processing
                 // The outbox event will be retried by the publisher
+                logger.error("Error occurred trying to process order {}: {}", orderId, e.getMessage());
             }
             
             // Step 6: Return updated response
