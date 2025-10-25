@@ -16,11 +16,35 @@ import java.util.UUID;
 public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
     
     private static final Logger logger = LoggerFactory.getLogger(RedisOrderStatusCacheAdapter.class);
-    
+    private final RedisTemplate<String, String> redisTemplate;
+
+    public RedisOrderStatusCacheAdapter(RedisTemplate<String, String> redisTemplate) {
+
+        this.redisTemplate = redisTemplate;
+
+    }
+
     public CacheOperationResult cacheOrderStatus(UUID orderId, OrderStatus status, Duration ttl) {
         try {
-            // TODO: Implement Redis caching logic
+            
+            String key = getOrderStatusKey(orderId);
+            String value = status.name();
+
+            if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
+
+                redisTemplate.opsForValue().set(key, value, ttl);
+
+            }
+
+            else {
+
+                redisTemplate.opsForValue().set(key, value);
+
+            }
+
+            logger.debug("Successfully cached order status for orderId: {} with status: {}", orderId, status);
             return CacheOperationResult.success();
+            
         } catch (Exception e) {
             logger.error("Failed to cache order status for orderId: {}", orderId, e);
             return CacheOperationResult.failure("Failed to cache order status: " + e.getMessage());
@@ -65,6 +89,12 @@ public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
             logger.error("Failed to update order status for orderId: {}", orderId, e);
             return CacheOperationResult.failure("Failed to update order status: " + e.getMessage());
         }
+    }
+
+    public String getOrderStatusKey(UUID orderId) {
+
+        return "order:status:" + orderId.toString();
+
     }
 
 }
