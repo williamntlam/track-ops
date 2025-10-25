@@ -1,4 +1,69 @@
 ---
+# TrackOps Server ConfigMap (Health Check Configuration)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trackops-server-config
+data:
+  application-health.yml: |
+    # Health Check Configuration
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+          base-path: /actuator
+      endpoint:
+        health:
+          show-details: always
+          show-components: always
+          probes:
+            enabled: true
+      health:
+        defaults:
+          enabled: true
+        db:
+          enabled: true
+        redis:
+          enabled: true
+        diskspace:
+          enabled: true
+          threshold: 100MB
+        circuitbreakers:
+          enabled: true
+      info:
+        env:
+          enabled: true
+        java:
+          enabled: true
+        build:
+          enabled: true
+        git:
+          enabled: true
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+        tags:
+          application: trackops-server
+          environment: ${SPRING_PROFILES_ACTIVE:default}
+
+    # Custom health check configuration
+    trackops:
+      health:
+        database:
+          enabled: true
+          timeout: 5s
+        redis:
+          enabled: true
+          timeout: 3s
+        kafka:
+          enabled: true
+          timeout: 5s
+        custom:
+          enabled: true
+
+---
 # PostgreSQL ConfigMap
 apiVersion: v1
 kind: ConfigMap
