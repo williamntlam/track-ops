@@ -28,6 +28,7 @@ import com.trackops.server.application.services.outbox.OutboxEventService;
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
 import com.trackops.server.ports.output.cache.OrderCachePort;
 import com.trackops.server.adapters.output.monitoring.MetricsService;
+import com.trackops.server.adapters.output.logging.StructuredLoggingService;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.util.Optional;
@@ -35,6 +36,7 @@ import java.util.Optional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -54,11 +56,12 @@ public class OrderService implements OrderServicePort {
     private final OrderStatusCachePort orderStatusCachePort;
     private final OrderCachePort orderCachePort;
     private final MetricsService metricsService;
+    private final StructuredLoggingService loggingService;
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
                        OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
                        OutboxEventService outboxEventService, OrderStatusCachePort orderStatusCachePort,
-                       OrderCachePort orderCachePort, MetricsService metricsService) {
+                       OrderCachePort orderCachePort, MetricsService metricsService, StructuredLoggingService loggingService) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
@@ -67,6 +70,7 @@ public class OrderService implements OrderServicePort {
         this.orderStatusCachePort = orderStatusCachePort;
         this.orderCachePort = orderCachePort;
         this.metricsService = metricsService;
+        this.loggingService = loggingService;
     }
 
     @Override 
@@ -139,11 +143,19 @@ public class OrderService implements OrderServicePort {
                 logger.warn("Failed to cache new order response {}: {}", savedOrder.getId(), e.getMessage());
             }
             
-            // Step 10: Record metrics
+            // Step 10: Record metrics and logging
             metricsService.recordOrderCreated();
             metricsService.recordOrderProcessingTime(sample);
             long revenueInCents = totalAmount.multiply(new BigDecimal("100")).longValue();
             metricsService.updateTotalRevenue(metricsService.getTotalRevenue() + revenueInCents);
+            
+            // Log business event
+            loggingService.logOrderEvent("ORDER_CREATED", savedOrder.getId().toString(), 
+                customerId.toString(), Map.of(
+                    "totalAmount", totalAmount,
+                    "status", savedOrder.getStatus().toString(),
+                    "deliveryInstructions", deliveryInstructions != null ? deliveryInstructions : "none"
+                ));
             
             return response;
 
