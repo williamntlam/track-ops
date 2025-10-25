@@ -12,6 +12,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,7 +36,7 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> getOrderById(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> getOrderById(@PathVariable @NotNull UUID id) {
         OrderResponse response = orderService.getOrderById(id);
         if (response == null) {
             return ResponseEntity.notFound().build();
@@ -45,14 +46,14 @@ public class OrderController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(
-            @PathVariable UUID id,
+            @PathVariable @NotNull UUID id,
             @Valid @RequestBody UpdateOrderStatusRequest request) {
         OrderResponse response = orderService.updateOrderStatus(id, request.getNewStatus());
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelOrder(@PathVariable UUID id) {
+    public ResponseEntity<Void> cancelOrder(@PathVariable @NotNull UUID id) {
         orderService.cancelOrder(id);
         return ResponseEntity.noContent().build();
     }
@@ -64,37 +65,37 @@ public class OrderController {
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<OrderResponse>> getOrdersByStatus(@PathVariable OrderStatus status) {
+    public ResponseEntity<List<OrderResponse>> getOrdersByStatus(@PathVariable @NotNull OrderStatus status) {
         List<OrderResponse> response = orderService.getOrdersByStatus(status);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(@PathVariable UUID customerId) {
+    public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(@PathVariable @NotNull UUID customerId) {
         List<OrderResponse> response = orderService.getOrdersByCustomerId(customerId);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/confirm")
-    public ResponseEntity<OrderResponse> confirmOrder(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> confirmOrder(@PathVariable @NotNull UUID id) {
         OrderResponse response = orderService.confirmOrder(id);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/process")
-    public ResponseEntity<OrderResponse> processOrder(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> processOrder(@PathVariable @NotNull UUID id) {
         OrderResponse response = orderService.processOrder(id);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/ship")
-    public ResponseEntity<OrderResponse> shipOrder(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> shipOrder(@PathVariable @NotNull UUID id) {
         OrderResponse response = orderService.shipOrder(id);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/deliver")
-    public ResponseEntity<OrderResponse> deliverOrder(@PathVariable UUID id) {
+    public ResponseEntity<OrderResponse> deliverOrder(@PathVariable @NotNull UUID id) {
         OrderResponse response = orderService.deliverOrder(id);
         return ResponseEntity.ok(response);
     }

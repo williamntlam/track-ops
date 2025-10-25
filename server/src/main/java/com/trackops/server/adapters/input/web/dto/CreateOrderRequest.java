@@ -6,20 +6,29 @@ import com.trackops.server.adapters.input.web.dto.AddressDTO;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.Valid;
+import com.trackops.server.adapters.input.web.validation.ValidCustomerId;
 
 public class CreateOrderRequest {
 
-    @NotNull
+    @NotNull(message = "Customer ID is required")
+    @ValidCustomerId
     private UUID customerId;
-    @NotNull
-    @DecimalMin("0.01")
+    
+    @NotNull(message = "Total amount is required")
+    @DecimalMin(value = "0.01", message = "Total amount must be at least $0.01")
+    @DecimalMax(value = "999999.99", message = "Total amount cannot exceed $999,999.99")
     private BigDecimal totalAmount;
-    @NotNull
+    
+    @NotNull(message = "Address is required")
     @Valid
     private AddressDTO address;
-    @Size(max = 500)
+    
+    @Size(max = 500, message = "Delivery instructions must not exceed 500 characters")
+    @Pattern(regexp = "^[A-Za-z0-9\\s\\-.,!?()]{0,500}$", message = "Delivery instructions can only contain letters, numbers, spaces, and basic punctuation")
     private String deliveryInstructions;
 
     public CreateOrderRequest() {}

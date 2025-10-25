@@ -4,13 +4,17 @@ import com.trackops.server.application.services.saga.SagaManagementService;
 import com.trackops.server.domain.model.saga.SagaInstance;
 import com.trackops.server.domain.model.saga.SagaStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/sagas")
+@Validated
 public class SagaController {
     
     private final SagaManagementService sagaManagementService;
@@ -20,7 +24,10 @@ public class SagaController {
     }
 
     @GetMapping("/{sagaId}")
-    public ResponseEntity<SagaInstance> getSagaStatus(@PathVariable String sagaId) {
+    public ResponseEntity<SagaInstance> getSagaStatus(
+            @PathVariable @NotBlank(message = "Saga ID is required") 
+            @Pattern(regexp = "^[A-Za-z0-9\\-_]{1,50}$", message = "Saga ID must be 1-50 characters and contain only letters, numbers, hyphens, and underscores") 
+            String sagaId) {
         try {
             SagaInstance saga = sagaManagementService.getSagaStatus(sagaId);
             if (saga != null) {
@@ -34,7 +41,10 @@ public class SagaController {
     }
 
     @GetMapping("/order/{orderId}")
-    public ResponseEntity<List<SagaInstance>> getSagasForOrder(@PathVariable String orderId) {
+    public ResponseEntity<List<SagaInstance>> getSagasForOrder(
+            @PathVariable @NotBlank(message = "Order ID is required") 
+            @Pattern(regexp = "^[A-Za-z0-9\\-_]{1,50}$", message = "Order ID must be 1-50 characters and contain only letters, numbers, hyphens, and underscores") 
+            String orderId) {
         try {
             List<SagaInstance> sagas = sagaManagementService.getSagasForOrder(orderId);
             return ResponseEntity.ok(sagas);

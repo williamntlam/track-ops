@@ -2,10 +2,12 @@ package com.trackops.server.adapters.input.web.dto;
 
 import com.trackops.server.domain.model.enums.OrderStatus;
 import jakarta.validation.constraints.NotNull;
+import com.trackops.server.adapters.input.web.validation.ValidOrderStatus;
 
 public class UpdateOrderStatusRequest {
 
-    @NotNull
+    @NotNull(message = "New status is required")
+    @ValidOrderStatus(message = "Invalid order status transition")
     private OrderStatus newStatus;
 
     public UpdateOrderStatusRequest() {}

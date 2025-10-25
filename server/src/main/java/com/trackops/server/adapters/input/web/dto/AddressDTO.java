@@ -2,29 +2,35 @@ package com.trackops.server.adapters.input.web.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 
 public class AddressDTO {
 
-    @NotBlank
-    @Size(max = 255)
+    @NotBlank(message = "Street address is required")
+    @Size(min = 5, max = 255, message = "Street address must be between 5 and 255 characters")
     private String streetAddress;
 
-    @NotBlank
-    @Size(max = 100)
+    @NotBlank(message = "City is required")
+    @Size(min = 2, max = 100, message = "City must be between 2 and 100 characters")
+    @Pattern(regexp = "^[A-Za-z\\s\\-']{2,100}$", message = "City must contain only letters, spaces, hyphens, and apostrophes")
     private String city;
 
-    @Size(max = 100)
+    @Size(max = 100, message = "State must not exceed 100 characters")
+    @Pattern(regexp = "^[A-Za-z\\s\\-']{0,100}$", message = "State must contain only letters, spaces, hyphens, and apostrophes")
     private String state;
 
-    @NotBlank
-    @Size(max = 20)
+    @NotBlank(message = "Postal code is required")
+    @Size(max = 20, message = "Postal code must not exceed 20 characters")
+    @Pattern(regexp = "^[A-Za-z0-9\\s-]{3,20}$", message = "Postal code must be 3-20 characters and contain only letters, numbers, spaces, and hyphens")
     private String postalCode;
 
-    @NotBlank
-    @Size(max = 100)
+    @NotBlank(message = "Country is required")
+    @Size(max = 100, message = "Country name must not exceed 100 characters")
+    @Pattern(regexp = "^[A-Za-z\\s]{2,100}$", message = "Country must be 2-100 characters and contain only letters and spaces")
     private String country;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "Phone number must not exceed 50 characters")
+    @Pattern(regexp = "^[+]?[0-9\\s\\-\\(\\)]{7,50}$", message = "Phone number must be 7-50 characters and contain only numbers, spaces, hyphens, parentheses, and optional + prefix")
     private String phoneNumber;
 
     public AddressDTO() {

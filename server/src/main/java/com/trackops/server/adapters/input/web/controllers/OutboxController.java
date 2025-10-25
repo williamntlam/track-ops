@@ -4,13 +4,17 @@ import com.trackops.server.application.services.outbox.OutboxEventService;
 import com.trackops.server.application.services.outbox.OutboxEventPublisher;
 import com.trackops.server.domain.model.outbox.OutboxEvent;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/outbox")
+@Validated
 public class OutboxController {
     
     private final OutboxEventService outboxEventService;
@@ -32,7 +36,10 @@ public class OutboxController {
     }
 
     @GetMapping("/events/aggregate/{aggregateId}")
-    public ResponseEntity<List<OutboxEvent>> getEventsByAggregateId(@PathVariable String aggregateId) {
+    public ResponseEntity<List<OutboxEvent>> getEventsByAggregateId(
+            @PathVariable @NotBlank(message = "Aggregate ID is required") 
+            @Pattern(regexp = "^[A-Za-z0-9\\-_]{1,50}$", message = "Aggregate ID must be 1-50 characters and contain only letters, numbers, hyphens, and underscores") 
+            String aggregateId) {
         try {
             List<OutboxEvent> events = outboxEventService.getEventsByAggregateId(aggregateId);
             return ResponseEntity.ok(events);

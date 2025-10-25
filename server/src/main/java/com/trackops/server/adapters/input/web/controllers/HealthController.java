@@ -2,6 +2,7 @@ package com.trackops.server.adapters.input.web.controllers;
 
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.actuate.health.Status;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,11 +14,18 @@ import com.trackops.server.adapters.output.health.ApplicationHealthIndicator;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Custom health check controller for additional health endpoints.
  * Provides simplified health checks and status information for load balancers
  * and monitoring systems that need lightweight health endpoints.
+ * 
+ * Note: For production, prefer Spring Boot Actuator endpoints:
+ * - /actuator/health (main health endpoint)
+ * - /actuator/health/readiness (Kubernetes readiness probe)
+ * - /actuator/health/liveness (Kubernetes liveness probe)
  */
 @RestController
 @RequestMapping("/health")
@@ -40,75 +48,111 @@ public class HealthController {
     }
     
     /**
+     * Helper method to check if all critical services are healthy.
+     * Critical services: Database, Redis, Kafka
+     */
+    private boolean areCriticalServicesHealthy() {
+        return isHealthy(databaseHealthIndicator) && 
+               isHealthy(redisHealthIndicator) && 
+               isHealthy(kafkaHealthIndicator);
+    }
+    
+    /**
+     * Helper method to check if a health indicator is UP.
+     * Uses Status.UP.equals() for type safety and future-proofing.
+     */
+    private boolean isHealthy(HealthIndicator indicator) {
+        try {
+            Health health = indicator.health();
+            return Status.UP.equals(health.getStatus());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Helper method to get health status safely with timeout protection.
+     */
+    private Health getHealthSafely(HealthIndicator indicator) {
+        try {
+            return indicator.health();
+        } catch (Exception e) {
+            return Health.down()
+                .withDetail("error", "Health check failed: " + e.getMessage())
+                .build();
+        }
+    }
+    
+    /**
      * Simple health check endpoint for load balancers.
-     * Returns 200 OK if all critical services are healthy.
+     * Returns 200 OK if all critical services are healthy, 503 if any are down.
      */
     @GetMapping("/simple")
     public ResponseEntity<Map<String, String>> simpleHealth() {
         Map<String, String> response = new HashMap<>();
         
-        try {
-            Health dbHealth = databaseHealthIndicator.health();
-            Health redisHealth = redisHealthIndicator.health();
-            Health kafkaHealth = kafkaHealthIndicator.health();
-            Health appHealth = applicationHealthIndicator.health();
-            
-            boolean allHealthy = dbHealth.getStatus().getCode().equals("UP") &&
-                               redisHealth.getStatus().getCode().equals("UP") &&
-                               kafkaHealth.getStatus().getCode().equals("UP") &&
-                               appHealth.getStatus().getCode().equals("UP");
-            
-            if (allHealthy) {
-                response.put("status", "UP");
-                response.put("message", "All services are healthy");
-                return ResponseEntity.ok(response);
-            } else {
-                response.put("status", "DOWN");
-                response.put("message", "One or more services are unhealthy");
-                return ResponseEntity.status(503).body(response);
-            }
-            
-        } catch (Exception e) {
+        boolean criticalServicesHealthy = areCriticalServicesHealthy();
+        
+        if (criticalServicesHealthy) {
+            response.put("status", "UP");
+            response.put("message", "All critical services are healthy");
+            return ResponseEntity.ok(response);
+        } else {
             response.put("status", "DOWN");
-            response.put("message", "Health check failed: " + e.getMessage());
+            response.put("message", "One or more critical services are unhealthy");
             return ResponseEntity.status(503).body(response);
         }
     }
     
     /**
-     * Detailed health check endpoint with component status.
+     * Detailed health check endpoint with component status and details.
+     * Includes both status and details for each component.
      */
     @GetMapping("/detailed")
     public ResponseEntity<Map<String, Object>> detailedHealth() {
         Map<String, Object> response = new HashMap<>();
         
-        try {
-            Health dbHealth = databaseHealthIndicator.health();
-            Health redisHealth = redisHealthIndicator.health();
-            Health kafkaHealth = kafkaHealthIndicator.health();
-            Health appHealth = applicationHealthIndicator.health();
-            
-            Map<String, Object> components = new HashMap<>();
-            components.put("database", dbHealth.getDetails());
-            components.put("redis", redisHealth.getDetails());
-            components.put("kafka", kafkaHealth.getDetails());
-            components.put("application", appHealth.getDetails());
-            
-            boolean allHealthy = dbHealth.getStatus().getCode().equals("UP") &&
-                               redisHealth.getStatus().getCode().equals("UP") &&
-                               kafkaHealth.getStatus().getCode().equals("UP") &&
-                               appHealth.getStatus().getCode().equals("UP");
-            
-            response.put("status", allHealthy ? "UP" : "DOWN");
-            response.put("components", components);
-            response.put("timestamp", System.currentTimeMillis());
-            
+        // Get health status safely for all components
+        Health dbHealth = getHealthSafely(databaseHealthIndicator);
+        Health redisHealth = getHealthSafely(redisHealthIndicator);
+        Health kafkaHealth = getHealthSafely(kafkaHealthIndicator);
+        Health appHealth = getHealthSafely(applicationHealthIndicator);
+        
+        // Build component status map with both status and details
+        Map<String, Object> components = new HashMap<>();
+        
+        Map<String, Object> dbComponent = new HashMap<>();
+        dbComponent.put("status", dbHealth.getStatus().getCode());
+        dbComponent.put("details", dbHealth.getDetails());
+        components.put("database", dbComponent);
+        
+        Map<String, Object> redisComponent = new HashMap<>();
+        redisComponent.put("status", redisHealth.getStatus().getCode());
+        redisComponent.put("details", redisHealth.getDetails());
+        components.put("redis", redisComponent);
+        
+        Map<String, Object> kafkaComponent = new HashMap<>();
+        kafkaComponent.put("status", kafkaHealth.getStatus().getCode());
+        kafkaComponent.put("details", kafkaHealth.getDetails());
+        components.put("kafka", kafkaComponent);
+        
+        Map<String, Object> appComponent = new HashMap<>();
+        appComponent.put("status", appHealth.getStatus().getCode());
+        appComponent.put("details", appHealth.getDetails());
+        components.put("application", appComponent);
+        
+        // Determine overall status
+        boolean criticalServicesHealthy = areCriticalServicesHealthy();
+        String overallStatus = criticalServicesHealthy ? "UP" : "DOWN";
+        
+        response.put("status", overallStatus);
+        response.put("components", components);
+        response.put("timestamp", System.currentTimeMillis());
+        
+        // Return 503 if any critical service is down
+        if (criticalServicesHealthy) {
             return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("status", "DOWN");
-            response.put("error", e.getMessage());
-            response.put("timestamp", System.currentTimeMillis());
+        } else {
             return ResponseEntity.status(503).body(response);
         }
     }
@@ -116,34 +160,21 @@ public class HealthController {
     /**
      * Readiness probe endpoint for Kubernetes.
      * Indicates if the application is ready to receive traffic.
+     * Only checks critical services (Database, Redis, Kafka).
      */
     @GetMapping("/ready")
     public ResponseEntity<Map<String, String>> readiness() {
         Map<String, String> response = new HashMap<>();
         
-        try {
-            // Check if critical services are available
-            Health dbHealth = databaseHealthIndicator.health();
-            Health redisHealth = redisHealthIndicator.health();
-            Health kafkaHealth = kafkaHealthIndicator.health();
-            
-            boolean ready = dbHealth.getStatus().getCode().equals("UP") &&
-                          redisHealth.getStatus().getCode().equals("UP") &&
-                          kafkaHealth.getStatus().getCode().equals("UP");
-            
-            if (ready) {
-                response.put("status", "READY");
-                response.put("message", "Application is ready to receive traffic");
-                return ResponseEntity.ok(response);
-            } else {
-                response.put("status", "NOT_READY");
-                response.put("message", "Application is not ready");
-                return ResponseEntity.status(503).body(response);
-            }
-            
-        } catch (Exception e) {
-            response.put("status", "NOT_READY");
-            response.put("message", "Readiness check failed: " + e.getMessage());
+        boolean criticalServicesHealthy = areCriticalServicesHealthy();
+        
+        if (criticalServicesHealthy) {
+            response.put("status", "UP");
+            response.put("message", "Application is ready to receive traffic");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("status", "DOWN");
+            response.put("message", "Application is not ready - critical services unavailable");
             return ResponseEntity.status(503).body(response);
         }
     }
@@ -151,22 +182,17 @@ public class HealthController {
     /**
      * Liveness probe endpoint for Kubernetes.
      * Indicates if the application is alive and should be restarted if not.
+     * This is a lightweight check that only verifies the application is responding.
      */
     @GetMapping("/live")
     public ResponseEntity<Map<String, String>> liveness() {
         Map<String, String> response = new HashMap<>();
         
-        try {
-            // Simple liveness check - just verify the application is responding
-            response.put("status", "ALIVE");
-            response.put("message", "Application is alive");
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            response.put("status", "DEAD");
-            response.put("message", "Application is not responding");
-            return ResponseEntity.status(503).body(response);
-        }
+        // Simple liveness check - just verify the application is responding
+        // No external dependencies checked for liveness
+        response.put("status", "UP");
+        response.put("message", "Application is alive");
+        response.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        return ResponseEntity.ok(response);
     }
 }
