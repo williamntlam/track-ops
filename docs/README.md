@@ -1,27 +1,38 @@
-# TrackOps Learning Documentation
+# TrackOps Project Documentation
 
-This directory contains comprehensive learning-focused documentation for the TrackOps project. The goal is to help you understand **why** we make certain decisions and **how** to implement them yourself.
+This directory contains comprehensive documentation for the TrackOps project, organized by component and purpose.
 
-## Learning Philosophy
+## 📚 Documentation Structure
 
-### 🎯 **Learn by Doing**
+### **Server Documentation** (`server/`)
+Complete documentation for the TrackOps server application:
+- **`README.md`** - API overview and quick start guide
+- **`API-REFERENCE.md`** - Complete API endpoint documentation
+- **`ARCHITECTURE.md`** - System architecture and design patterns
+- **`DEPLOYMENT.md`** - Deployment guides for all environments
+- **`DEVELOPER-GUIDE.md`** - Developer workflow and best practices
+- **`CHANGELOG.md`** - Version history and release notes
+
+### **Learning Documentation** (Learning-focused guides)
+- **`architecture/`** - System design decisions and **why** we chose them
+- **`standards/`** - Coding practices with explanations of **why** they matter
+- **`patterns/`** - Design patterns with **when** and **why** to use them
+- **`api/`** - API design principles and **why** we structure them this way
+- **`learning/`** - Implementation guides and learning resources
+
+## 🎯 Learning Philosophy
+
+### **Learn by Doing**
 - Implement code yourself with guidance
 - Understand the reasoning behind each decision
 - Build confidence through hands-on experience
 - Ask "why" questions to deepen understanding
 
-### 🧠 **Understanding Over Memorization**
+### **Understanding Over Memorization**
 - Focus on concepts and principles
 - Learn patterns that apply beyond this project
 - Understand trade-offs and alternatives
 - Build mental models for problem-solving
-
-## Directory Structure
-
-- **`architecture/`** - System design decisions and **why** we chose them
-- **`standards/`** - Coding practices with explanations of **why** they matter
-- **`patterns/`** - Design patterns with **when** and **why** to use them
-- **`api/`** - API design principles and **why** we structure them this way
 
 ## How to Use This Documentation
 
