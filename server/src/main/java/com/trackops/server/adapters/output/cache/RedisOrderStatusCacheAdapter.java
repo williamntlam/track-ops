@@ -77,8 +77,18 @@ public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
 
     public CacheOperationResult removeOrderStatus(UUID orderId) {
         try {
-            // TODO: Implement Redis removal logic
+            
+            String key = getOrderStatusKey(orderId);
+            Boolean deleted = redisTemplate.delete(key);
+
+            if (Boolean.TRUE.equals(deleted)) {
+                logger.debug("Successfully removed order status from cache for orderId: {}", orderId);
+                return CacheOperationResult.success();
+            }
+
+            logger.debug("Order status not found in cache for removal, orderId: {}", orderId);
             return CacheOperationResult.success();
+
         } catch (Exception e) {
             logger.error("Failed to remove order status for orderId: {}", orderId, e);
             return CacheOperationResult.failure("Failed to remove order status: " + e.getMessage());
