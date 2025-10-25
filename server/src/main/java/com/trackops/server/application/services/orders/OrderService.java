@@ -27,6 +27,8 @@ import com.trackops.server.application.services.saga.SagaOrchestratorService;
 import com.trackops.server.application.services.outbox.OutboxEventService;
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
 import com.trackops.server.ports.output.cache.OrderCachePort;
+import com.trackops.server.adapters.output.monitoring.MetricsService;
+import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -51,11 +53,12 @@ public class OrderService implements OrderServicePort {
     private final OutboxEventService outboxEventService;
     private final OrderStatusCachePort orderStatusCachePort;
     private final OrderCachePort orderCachePort;
+    private final MetricsService metricsService;
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
                        OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
                        OutboxEventService outboxEventService, OrderStatusCachePort orderStatusCachePort,
-                       OrderCachePort orderCachePort) {
+                       OrderCachePort orderCachePort, MetricsService metricsService) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
@@ -63,10 +66,12 @@ public class OrderService implements OrderServicePort {
         this.outboxEventService = outboxEventService;
         this.orderStatusCachePort = orderStatusCachePort;
         this.orderCachePort = orderCachePort;
+        this.metricsService = metricsService;
     }
 
     @Override 
     public OrderResponse createOrder(CreateOrderRequest request) {
+        Timer.Sample sample = metricsService.startOrderProcessingTimer();
         try {
             // Step 1: Parse the data from CreateOrderRequest
             UUID customerId = request.getCustomerId();
@@ -133,6 +138,12 @@ public class OrderService implements OrderServicePort {
             } catch (Exception e) {
                 logger.warn("Failed to cache new order response {}: {}", savedOrder.getId(), e.getMessage());
             }
+            
+            // Step 10: Record metrics
+            metricsService.recordOrderCreated();
+            metricsService.recordOrderProcessingTime(sample);
+            long revenueInCents = totalAmount.multiply(new BigDecimal("100")).longValue();
+            metricsService.updateTotalRevenue(metricsService.getTotalRevenue() + revenueInCents);
             
             return response;
 
