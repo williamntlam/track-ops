@@ -26,6 +26,7 @@ import com.trackops.server.domain.exceptions.InvalidOrderStatusTransitionExcepti
 import com.trackops.server.application.services.saga.SagaOrchestratorService;
 import com.trackops.server.application.services.outbox.OutboxEventService;
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
+import com.trackops.server.ports.output.cache.OrderCachePort;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -49,16 +50,19 @@ public class OrderService implements OrderServicePort {
     private final SagaOrchestratorService sagaOrchestratorService;
     private final OutboxEventService outboxEventService;
     private final OrderStatusCachePort orderStatusCachePort;
+    private final OrderCachePort orderCachePort;
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
                        OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
-                       OutboxEventService outboxEventService, OrderStatusCachePort orderStatusCachePort) {
+                       OutboxEventService outboxEventService, OrderStatusCachePort orderStatusCachePort,
+                       OrderCachePort orderCachePort) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
         this.sagaOrchestratorService = sagaOrchestratorService;
         this.outboxEventService = outboxEventService;
         this.orderStatusCachePort = orderStatusCachePort;
+        this.orderCachePort = orderCachePort;
     }
 
     @Override 
@@ -109,10 +113,25 @@ public class OrderService implements OrderServicePort {
                 // The outbox event will be retried by the publisher
             }
 
-            // Step 7: Return mapped response
+            // Step 7: Cache the new order
+            try {
+                orderCachePort.cacheOrder(savedOrder, Duration.ofHours(1));
+                logger.debug("Cached new order: {}", savedOrder.getId());
+            } catch (Exception e) {
+                logger.warn("Failed to cache new order {}: {}", savedOrder.getId(), e.getMessage());
+            }
+
+            // Step 8: Return mapped response
             OrderResponse response = orderMapper.orderToOrderResponse(savedOrder);
             if (response == null) {
                 throw new RuntimeException("Failed to map order to response");
+            }
+            
+            // Step 9: Cache the response
+            try {
+                orderCachePort.cacheOrderResponse(savedOrder.getId(), response, Duration.ofHours(1));
+            } catch (Exception e) {
+                logger.warn("Failed to cache new order response {}: {}", savedOrder.getId(), e.getMessage());
             }
             
             return response;
@@ -134,29 +153,49 @@ public class OrderService implements OrderServicePort {
                 throw new OrderValidationException("Order ID cannot be null");
             }
             
-            // Step 2: Check cache first
-            Optional<OrderStatus> cachedStatus = orderStatusCachePort.getOrderStatus(orderId);
-            if (cachedStatus.isPresent()) {
-                // Cache hit - get full order from database
-                Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new OrderNotFoundException(orderId));
-                
-                // Cache is up to date - return immediately
-                OrderResponse response = orderMapper.orderToOrderResponse(order);
+            // Step 2: Check cache first for OrderResponse
+            Optional<OrderResponse> cachedResponse = orderCachePort.getOrderResponse(orderId);
+            if (cachedResponse.isPresent()) {
+                logger.debug("Cache hit for order response: {}", orderId);
+                return cachedResponse.get();
+            }
+
+            // Step 3: Check cache for Order entity
+            Optional<Order> cachedOrder = orderCachePort.getOrder(orderId);
+            if (cachedOrder.isPresent()) {
+                logger.debug("Cache hit for order entity: {}", orderId);
+                OrderResponse response = orderMapper.orderToOrderResponse(cachedOrder.get());
                 if (response == null) {
-                    throw new RuntimeException("Failed to map order to response");
+                    throw new RuntimeException("Failed to map cached order to response");
                 }
+                
+                // Cache the response for future requests
+                try {
+                    orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
+                } catch (Exception e) {
+                    logger.warn("Failed to cache order response for {}: {}", orderId, e.getMessage());
+                }
+                
                 return response;
             }
 
-            // Step 3: Find the order by ID
+            // Step 4: Database lookup
             Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
             
-            // Step 4: Return mapped response
+            // Step 5: Map to response
             OrderResponse response = orderMapper.orderToOrderResponse(order);
             if (response == null) {
                 throw new RuntimeException("Failed to map order to response");
+            }
+            
+            // Step 6: Cache both entity and response
+            try {
+                orderCachePort.cacheOrder(order, Duration.ofHours(1));
+                orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
+                logger.debug("Cached order and response for: {}", orderId);
+            } catch (Exception e) {
+                logger.warn("Failed to cache order data for {}: {}", orderId, e.getMessage());
             }
             
             return response;
@@ -224,11 +263,22 @@ public class OrderService implements OrderServicePort {
                 throw new RuntimeException("Failed to save updated order to database");
             }
             
-            // Step 5.5: Update cache.
+            // Step 5.5: Invalidate and update caches
             try {
-
+                // Invalidate existing caches
+                orderCachePort.invalidateAllOrderCaches(orderId);
+                
+                // Update status cache (legacy)
                 orderStatusCachePort.updateOrderStatus(orderId, newStatus, Duration.ofHours(1));
-                logger.debug("Updated cache for order status {} -> {}", orderId, newStatus);
+                
+                // Cache the updated order and response
+                orderCachePort.cacheOrder(updatedOrder, Duration.ofHours(1));
+                OrderResponse updatedResponse = orderMapper.orderToOrderResponse(updatedOrder);
+                if (updatedResponse != null) {
+                    orderCachePort.cacheOrderResponse(orderId, updatedResponse, Duration.ofHours(1));
+                }
+                
+                logger.debug("Updated caches for order status {} -> {}", orderId, newStatus);
 
             } catch (Exception e) {
                 logger.warn("Failed to update cache for order {}: {}", orderId, e.getMessage());
@@ -286,6 +336,17 @@ public class OrderService implements OrderServicePort {
                 throw new OrderValidationException("Delivered orders cannot be cancelled");
             }
 
+            try {
+
+                orderStatusCachePort.updateOrderStatus(orderId, OrderStatus.CANCELLED, Duration.ofHours(1));
+                logger.debug("Updated order {} to have a status of cancelled", orderId);
+
+            } catch (Exception e) {
+
+                logger.debug("Error occurred in updating the cache for order {} to have a status of cancelled: {}", orderId, e.getMessage());
+
+            }
+
             // Step 4: Start SAGA for order cancellation
             UUID sagaId = sagaOrchestratorService.startOrderCancellationSaga(orderId);
 
@@ -307,22 +368,44 @@ public class OrderService implements OrderServicePort {
     @Override
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         try {
-            // Step 1: Get paginated orders from repository
+            // Step 1: Generate cache key for this page
+            String pageKey = String.format("page_%d_size_%d_sort_%s", 
+                pageable.getPageNumber(), 
+                pageable.getPageSize(), 
+                pageable.getSort().toString());
+            
+            // Step 2: Check cache first
+            Optional<Page<OrderResponse>> cachedPage = orderCachePort.getOrderPage(pageKey);
+            if (cachedPage.isPresent()) {
+                logger.debug("Cache hit for orders page: {}", pageKey);
+                return cachedPage.get();
+            }
+            
+            // Step 3: Get paginated orders from repository
             Page<Order> orderPage = orderRepository.findAll(pageable);
             if (orderPage == null) {
                 throw new RuntimeException("Repository returned null orders page");
             }
             
-            // Step 2: Convert each Order to OrderResponse
+            // Step 4: Convert each Order to OrderResponse
             Page<OrderResponse> responsePage = orderPage.map(order -> {
                 try {
                     return orderMapper.orderToOrderResponse(order);
                 } catch (Exception e) {
+                    logger.warn("Failed to map order {}: {}", order.getId(), e.getMessage());
                     return null;
                 }
             });
             
-            // Step 3: Return the paginated responses
+            // Step 5: Cache the page (with shorter TTL for pagination)
+            try {
+                orderCachePort.cacheOrderPage(pageKey, responsePage, Duration.ofMinutes(15));
+                logger.debug("Cached orders page: {}", pageKey);
+            } catch (Exception e) {
+                logger.warn("Failed to cache orders page {}: {}", pageKey, e.getMessage());
+            }
+            
+            // Step 6: Return the paginated responses
             return responsePage;
             
         } catch (Exception e) {
@@ -338,18 +421,33 @@ public class OrderService implements OrderServicePort {
                 throw new OrderValidationException("Status cannot be null");
             }
             
-            // Step 2: Get orders by status from repository
+            // Step 2: Check cache first
+            Optional<List<OrderResponse>> cachedOrders = orderCachePort.getOrdersByStatus(status.name());
+            if (cachedOrders.isPresent()) {
+                logger.debug("Cache hit for orders by status: {}", status);
+                return cachedOrders.get();
+            }
+            
+            // Step 3: Get orders by status from repository
             List<Order> orders = orderRepository.findByStatus(status);
             if (orders == null) {
                 throw new RuntimeException("Repository returned null orders list");
             }
             
-            // Step 3: Convert to responses
+            // Step 4: Convert to responses
             List<OrderResponse> responses = orders.stream()
                 .filter(Objects::nonNull)
                 .map(orderMapper::orderToOrderResponse)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+            
+            // Step 5: Cache the results
+            try {
+                orderCachePort.cacheOrdersByStatus(status.name(), responses, Duration.ofMinutes(30));
+                logger.debug("Cached {} orders by status: {}", responses.size(), status);
+            } catch (Exception e) {
+                logger.warn("Failed to cache orders by status {}: {}", status, e.getMessage());
+            }
             
             return responses;
             
@@ -368,18 +466,33 @@ public class OrderService implements OrderServicePort {
                 throw new OrderValidationException("Customer ID cannot be null");
             }
             
-            // Step 2: Get orders by customer ID from repository
+            // Step 2: Check cache first
+            Optional<List<OrderResponse>> cachedOrders = orderCachePort.getOrdersByCustomer(customerId);
+            if (cachedOrders.isPresent()) {
+                logger.debug("Cache hit for orders by customer: {}", customerId);
+                return cachedOrders.get();
+            }
+            
+            // Step 3: Get orders by customer ID from repository
             List<Order> orders = orderRepository.findByCustomerId(customerId);
             if (orders == null) {
                 throw new RuntimeException("Repository returned null orders list");
             }
             
-            // Step 3: Convert to responses
+            // Step 4: Convert to responses
             List<OrderResponse> responses = orders.stream()
                 .filter(Objects::nonNull)
                 .map(orderMapper::orderToOrderResponse)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+            
+            // Step 5: Cache the results
+            try {
+                orderCachePort.cacheOrdersByCustomer(customerId, responses, Duration.ofMinutes(30));
+                logger.debug("Cached {} orders by customer: {}", responses.size(), customerId);
+            } catch (Exception e) {
+                logger.warn("Failed to cache orders by customer {}: {}", customerId, e.getMessage());
+            }
             
             return responses;
             
