@@ -27,7 +27,10 @@ Build a scalable, real-time backend system inspired by services like Uber Eats o
 
 - Order written to DB
 - Redis caches initial status (`PENDING`)
-- Kafka emits event: `order.created`
+- Kafka emits event: `ORDER_CREATED`
+- Inventory Service consumes event and reserves inventory
+- Inventory Service publishes `INVENTORY_RESERVED` or `INVENTORY_RESERVATION_FAILED`
+- Order Service updates status based on inventory response
 
 ### 2. 📦 Processing Orders
 
@@ -35,12 +38,21 @@ Build a scalable, real-time backend system inspired by services like Uber Eats o
 - Each update:
     - Written to DB (write-through)
     - Updated in Redis cache
-    - Emitted via Kafka topic `order.status.updated`
+    - Emitted via Kafka topic `ORDER_STATUS_UPDATED`
 
 ### 3. 📲 Frontend Real-time Updates
 
 - Frontend polls API or uses WebSocket
 - Retrieves latest order status from Redis
+
+### 4. 🏪 Microservices Architecture
+
+- **Order Service** (Port 8080): Manages order lifecycle and business logic
+- **Inventory Service** (Port 8081): Handles inventory reservations and releases  
+- **Event Relay Service** (Port 8082): Change Data Capture (CDC) and event publishing
+- **Event-Driven Communication**: Services communicate via Kafka events
+- **Distributed Transactions**: SAGA pattern for complex workflows
+- **Outbox Pattern**: Reliable event publishing with retry mechanisms
 
 ---
 
@@ -57,19 +69,30 @@ Build a scalable, real-time backend system inspired by services like Uber Eats o
 - Kafka producers and consumers
 - Handling retries, backoff, DLQs
 - Event replay support
+- Change Data Capture (CDC) patterns
+
+### 🏢 Microservices Architecture
+
+- Service decomposition and domain boundaries
+- Event-driven communication patterns
+- Outbox pattern for reliable messaging
+- Database per service pattern
+- Service-to-service communication
 
 ### 🧊 Kubernetes + DevOps
 
-- Deploy Redis, Kafka, PostgreSQL in Kubernetes
+- Deploy multiple microservices in Kubernetes
 - Use Helm or Kustomize
 - Set up liveness/readiness probes
 - Auto-scaling services
+- Service mesh and networking
 
 ### 🔍 Observability
 
 - Prometheus metrics (cache hit rates, Kafka lag)
 - Grafana dashboards
 - Logging with ELK or Loki
+- Distributed tracing across services
 
 ---
 

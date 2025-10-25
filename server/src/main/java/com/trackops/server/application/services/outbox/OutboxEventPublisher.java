@@ -2,18 +2,19 @@ package com.trackops.server.application.services.outbox;
 
 import com.trackops.server.domain.model.outbox.OutboxEvent;
 import com.trackops.server.ports.output.persistence.outbox.OutboxEventRepository;
-import com.trackops.server.ports.output.events.orders.OrderEventProducer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * @deprecated This service is deprecated. Event publishing is now handled by the Event Relay Service.
+ * This class is kept for backward compatibility but should not be used for new implementations.
+ */
+@Deprecated
 @Service
 public class OutboxEventPublisher {
     

@@ -12,6 +12,9 @@ import com.trackops.server.domain.events.orders.OrderCreatedEvent;
 import com.trackops.server.domain.events.orders.OrderStatusUpdatedEvent;
 import com.trackops.server.domain.events.orders.OrderDeliveredEvent;
 import com.trackops.server.domain.events.orders.OrderCancelledEvent;
+import com.trackops.server.domain.events.orders.InventoryReservedEvent;
+import com.trackops.server.domain.events.orders.InventoryReservationFailedEvent;
+import com.trackops.server.domain.events.orders.InventoryReleasedEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 
@@ -151,6 +154,97 @@ public class KafkaOrderEventConsumer {
             acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_CANCELLED event for order: {}", record.key(), e);
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
+        }
+    }
+
+    // Inventory Service Response Event Handlers
+    @KafkaListener(
+        topics = "INVENTORY_RESERVED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleInventoryReserved(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+        try {
+            String message = record.value();
+            UUID orderId = UUID.fromString(record.key());
+            String topic = record.topic();
+            
+            log.info("Received INVENTORY_RESERVED event for order: {} from topic: {}", orderId, topic);
+            log.debug("Message content: {}", message);
+
+            InventoryReservedEvent event = objectMapper.readValue(message, InventoryReservedEvent.class);
+            orderEventProcessor.processOrderEvent(event);
+
+            log.info("Successfully processed INVENTORY_RESERVED event for order: {}", orderId);
+            acknowledgment.acknowledge();
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize INVENTORY_RESERVED event for order: {} - Invalid JSON format", record.key(), e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
+        } catch (Exception e) {
+            log.error("Failed to process INVENTORY_RESERVED event for order: {}", record.key(), e);
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
+        }
+    }
+
+    @KafkaListener(
+        topics = "INVENTORY_RESERVATION_FAILED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleInventoryReservationFailed(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+        try {
+            String message = record.value();
+            UUID orderId = UUID.fromString(record.key());
+            String topic = record.topic();
+            
+            log.info("Received INVENTORY_RESERVATION_FAILED event for order: {} from topic: {}", orderId, topic);
+            log.debug("Message content: {}", message);
+
+            InventoryReservationFailedEvent event = objectMapper.readValue(message, InventoryReservationFailedEvent.class);
+            orderEventProcessor.processOrderEvent(event);
+
+            log.info("Successfully processed INVENTORY_RESERVATION_FAILED event for order: {}", orderId);
+            acknowledgment.acknowledge();
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize INVENTORY_RESERVATION_FAILED event for order: {} - Invalid JSON format", record.key(), e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
+        } catch (Exception e) {
+            log.error("Failed to process INVENTORY_RESERVATION_FAILED event for order: {}", record.key(), e);
+            // Don't acknowledge - let Kafka retry the message
+            throw e; // Re-throw to trigger retry mechanism
+        }
+    }
+
+    @KafkaListener(
+        topics = "INVENTORY_RELEASED",
+        groupId = "trackops-orders",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleInventoryReleased(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+        try {
+            String message = record.value();
+            UUID orderId = UUID.fromString(record.key());
+            String topic = record.topic();
+            
+            log.info("Received INVENTORY_RELEASED event for order: {} from topic: {}", orderId, topic);
+            log.debug("Message content: {}", message);
+
+            InventoryReleasedEvent event = objectMapper.readValue(message, InventoryReleasedEvent.class);
+            orderEventProcessor.processOrderEvent(event);
+
+            log.info("Successfully processed INVENTORY_RELEASED event for order: {}", orderId);
+            acknowledgment.acknowledge();
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize INVENTORY_RELEASED event for order: {} - Invalid JSON format", record.key(), e);
+            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
+        } catch (Exception e) {
+            log.error("Failed to process INVENTORY_RELEASED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message
             throw e; // Re-throw to trigger retry mechanism
         }

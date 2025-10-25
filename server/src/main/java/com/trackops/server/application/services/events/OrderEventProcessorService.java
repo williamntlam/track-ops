@@ -3,6 +3,9 @@ package com.trackops.server.application.services.events;
 import org.springframework.stereotype.Service;
 import com.trackops.server.ports.input.events.OrderEventProcessorPort;
 import com.trackops.server.domain.events.orders.OrderEvent;
+import com.trackops.server.domain.events.orders.InventoryReservedEvent;
+import com.trackops.server.domain.events.orders.InventoryReservationFailedEvent;
+import com.trackops.server.domain.events.orders.InventoryReleasedEvent;
 import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
 import com.trackops.server.ports.output.cache.IdempotencyCachePort; 
@@ -46,13 +49,8 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
                 return; // Already processed
             }
 
-            // Step Two: Load and Process the order
-            Order processedOrder = orderRepository.findById(orderId)
-                .map(order -> {
-                    order.process();
-                    return orderRepository.save(order);
-                })
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+            // Step Two: Handle different event types
+            Order processedOrder = handleEventByType(event, orderId);
 
             // Step Three: Mark event as processed
             ProcessedEvent processedEvent = ProcessedEvent.createForOrderEvent(
@@ -96,6 +94,82 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
         }
         
         log.debug("Event validation passed for event: {} of type: {}", event.getEventId(), event.getEventType());
+    }
+
+    private Order handleEventByType(OrderEvent event, UUID orderId) {
+        switch (event.getEventType()) {
+            case "ORDER_CREATED":
+            case "ORDER_STATUS_UPDATED":
+            case "ORDER_DELIVERED":
+            case "ORDER_CANCELLED":
+                // Standard order processing
+                return orderRepository.findById(orderId)
+                    .map(order -> {
+                        order.process();
+                        return orderRepository.save(order);
+                    })
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                    
+            case "INVENTORY_RESERVED":
+                return handleInventoryReserved((InventoryReservedEvent) event, orderId);
+                
+            case "INVENTORY_RESERVATION_FAILED":
+                return handleInventoryReservationFailed((InventoryReservationFailedEvent) event, orderId);
+                
+            case "INVENTORY_RELEASED":
+                return handleInventoryReleased((InventoryReleasedEvent) event, orderId);
+                
+            default:
+                log.warn("Unknown event type: {}", event.getEventType());
+                return orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        }
+    }
+
+    private Order handleInventoryReserved(InventoryReservedEvent event, UUID orderId) {
+        log.info("Processing inventory reserved event for order: {}", orderId);
+        
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        
+        // Update order status to CONFIRMED since inventory is reserved
+        if (order.getStatus() == OrderStatus.PENDING) {
+            order.confirm();
+            order = orderRepository.save(order);
+            log.info("Order {} confirmed after inventory reservation", orderId);
+        }
+        
+        return order;
+    }
+
+    private Order handleInventoryReservationFailed(InventoryReservationFailedEvent event, UUID orderId) {
+        log.warn("Processing inventory reservation failed event for order: {}", orderId);
+        log.warn("Failure reason: {}", event.getReason());
+        
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        
+        // Cancel the order due to inventory unavailability
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            order.cancel("Inventory reservation failed: " + event.getReason());
+            order = orderRepository.save(order);
+            log.info("Order {} cancelled due to inventory reservation failure", orderId);
+        }
+        
+        return order;
+    }
+
+    private Order handleInventoryReleased(InventoryReleasedEvent event, UUID orderId) {
+        log.info("Processing inventory released event for order: {}", orderId);
+        log.info("Release reason: {}", event.getReason());
+        
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        
+        // Order is already cancelled, just log the inventory release
+        log.info("Inventory released for order {}: {}", orderId, event.getReason());
+        
+        return order;
     }
 
 }
