@@ -35,9 +35,13 @@ import java.util.UUID;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class OrderService implements OrderServicePort {
+    
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     
     private final OrderRepository orderRepository;
     private final OrderEventProducer orderEventProducer;
@@ -220,6 +224,16 @@ public class OrderService implements OrderServicePort {
                 throw new RuntimeException("Failed to save updated order to database");
             }
             
+            // Step 5.5: Update cache.
+            try {
+
+                orderStatusCachePort.updateOrderStatus(orderId, newStatus, Duration.ofHours(1));
+                logger.debug("Updated cache for order status {} -> {}", orderId, newStatus);
+
+            } catch (Exception e) {
+                logger.warn("Failed to update cache for order {}: {}", orderId, e.getMessage());
+            }
+
             // Step 6: Create outbox event (within same transaction)
             try {
                 OrderStatusUpdatedEvent event = new OrderStatusUpdatedEvent(
