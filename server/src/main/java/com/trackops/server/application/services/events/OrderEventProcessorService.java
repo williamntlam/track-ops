@@ -13,6 +13,7 @@ import com.trackops.server.domain.model.CacheOperationResult;
 import com.trackops.server.domain.model.events.ProcessedEvent;
 import com.trackops.server.domain.model.orders.Order;
 import com.trackops.server.domain.model.enums.EventType;
+import com.trackops.server.domain.model.enums.OrderStatus;
 import java.time.Duration;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -151,9 +152,9 @@ public class OrderEventProcessorService implements OrderEventProcessorPort {
         
         // Cancel the order due to inventory unavailability
         if (order.getStatus() != OrderStatus.CANCELLED) {
-            order.cancel("Inventory reservation failed: " + event.getReason());
+            order.cancel();
             order = orderRepository.save(order);
-            log.info("Order {} cancelled due to inventory reservation failure", orderId);
+            log.info("Order {} cancelled due to inventory reservation failure: {}", orderId, event.getReason());
         }
         
         return order;
