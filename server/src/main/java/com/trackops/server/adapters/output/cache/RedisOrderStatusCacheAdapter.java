@@ -97,8 +97,17 @@ public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
 
     public boolean hasOrderStatus(UUID orderId) {
         try {
-            // TODO: Implement Redis existence check logic
-            return false;
+            
+            String key = getOrderStatusKey(orderId);
+
+            if (redisTemplate.hasKey(key)) {
+                logger.debug("Order status exists in cache for orderId: {}", orderId);
+                return true;
+            } else {
+                logger.debug("Order status not found in cache for orderId: {}", orderId);
+                return false;
+            }
+
         } catch (Exception e) {
             logger.error("Failed to check order status existence for orderId: {}", orderId, e);
             return false;
