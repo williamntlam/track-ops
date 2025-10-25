@@ -25,6 +25,9 @@ import com.trackops.server.domain.exceptions.OrderValidationException;
 import com.trackops.server.domain.exceptions.InvalidOrderStatusTransitionException;
 import com.trackops.server.application.services.saga.SagaOrchestratorService;
 import com.trackops.server.application.services.outbox.OutboxEventService;
+import com.trackops.server.ports.output.cache.OrderStatusCachePort;
+import java.time.Duration;
+import java.util.Optional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,15 +44,17 @@ public class OrderService implements OrderServicePort {
     private final OrderMapper orderMapper;
     private final SagaOrchestratorService sagaOrchestratorService;
     private final OutboxEventService outboxEventService;
+    private final OrderStatusCachePort orderStatusCachePort;
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
                        OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
-                       OutboxEventService outboxEventService) {
+                       OutboxEventService outboxEventService, OrderStatusCachePort orderStatusCachePort) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
         this.sagaOrchestratorService = sagaOrchestratorService;
         this.outboxEventService = outboxEventService;
+        this.orderStatusCachePort = orderStatusCachePort;
     }
 
     @Override 
@@ -125,11 +130,31 @@ public class OrderService implements OrderServicePort {
                 throw new OrderValidationException("Order ID cannot be null");
             }
             
-            // Step 2: Find the order by ID
+            // Step 2: Check cache first
+            Optional<OrderStatus> cachedStatus = orderStatusCachePort.getOrderStatus(orderId);
+            if (cachedStatus.isPresent()) {
+                // Cache hit - get full order from database
+                Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
+                
+                // Verify cache is still valid
+                if (order.getStatus() == cachedStatus.get()) {
+                    OrderResponse response = orderMapper.orderToOrderResponse(order);
+                    if (response == null) {
+                        throw new RuntimeException("Failed to map order to response");
+                    }
+                    return response;
+                } else {
+                    // Cache is stale, update it
+                    orderStatusCachePort.updateOrderStatus(orderId, order.getStatus(), Duration.ofHours(1));
+                }
+            }
+
+            // Step 3: Find the order by ID
             Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
             
-            // Step 3: Return mapped response
+            // Step 4: Return mapped response
             OrderResponse response = orderMapper.orderToOrderResponse(order);
             if (response == null) {
                 throw new RuntimeException("Failed to map order to response");
