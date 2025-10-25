@@ -137,17 +137,12 @@ public class OrderService implements OrderServicePort {
                 Order order = orderRepository.findById(orderId)
                     .orElseThrow(() -> new OrderNotFoundException(orderId));
                 
-                // Verify cache is still valid
-                if (order.getStatus() == cachedStatus.get()) {
-                    OrderResponse response = orderMapper.orderToOrderResponse(order);
-                    if (response == null) {
-                        throw new RuntimeException("Failed to map order to response");
-                    }
-                    return response;
-                } else {
-                    // Cache is stale, update it
-                    orderStatusCachePort.updateOrderStatus(orderId, order.getStatus(), Duration.ofHours(1));
+                // Cache is up to date - return immediately
+                OrderResponse response = orderMapper.orderToOrderResponse(order);
+                if (response == null) {
+                    throw new RuntimeException("Failed to map order to response");
                 }
+                return response;
             }
 
             // Step 3: Find the order by ID
