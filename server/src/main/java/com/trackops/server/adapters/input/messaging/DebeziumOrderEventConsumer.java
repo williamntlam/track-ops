@@ -2,7 +2,9 @@ package com.trackops.server.adapters.input.messaging;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.trackops.server.application.services.events.EventPublishingService;
+import com.trackops.server.adapters.output.messaging.orders.KafkaOrderEventProducer;
+import com.trackops.server.domain.events.orders.OrderCreatedEvent;
+import com.trackops.server.domain.events.orders.OrderCancelledEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +12,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /**
  * Consumer for Debezium CDC events from the orders table.
@@ -22,7 +26,7 @@ import org.springframework.stereotype.Component;
 public class DebeziumOrderEventConsumer {
     
     private final ObjectMapper objectMapper;
-    private final EventPublishingService eventPublishingService;
+    private final KafkaOrderEventProducer kafkaOrderEventProducer;
     
     @Value("${app.event-publishing.strategy:outbox}")
     private String eventPublishingStrategy;
@@ -80,14 +84,19 @@ public class DebeziumOrderEventConsumer {
     private void handleOrderCreated(JsonNode event) {
         try {
             JsonNode after = event.get("payload").get("after");
-            String orderId = after.get("id").asText();
+            String orderIdStr = after.get("id").asText();
             String status = after.get("status").asText();
+            String createdBy = after.has("created_by") ? after.get("created_by").asText() : "system";
             
-            log.info("Order created via Debezium: orderId={}, status={}", orderId, status);
+            UUID orderId = UUID.fromString(orderIdStr);
             
-            // Here you could trigger additional business logic
-            // For example, notify other services about the new order
-            // This is where you'd integrate with your existing business logic
+            log.info("Order created via Debezium: orderId={}, status={}, createdBy={}", orderId, status, createdBy);
+            
+            // Create and publish ORDER_CREATED event for inventory service
+            OrderCreatedEvent orderCreatedEvent = new OrderCreatedEvent(orderId, createdBy);
+            kafkaOrderEventProducer.publishOrderCreated(orderCreatedEvent);
+            
+            log.info("Successfully published ORDER_CREATED event for order: {}", orderId);
             
         } catch (Exception e) {
             log.error("Error handling order created event", e);
@@ -102,15 +111,30 @@ public class DebeziumOrderEventConsumer {
             JsonNode before = event.get("payload").get("before");
             JsonNode after = event.get("payload").get("after");
             
-            String orderId = after.get("id").asText();
+            String orderIdStr = after.get("id").asText();
             String newStatus = after.get("status").asText();
             String previousStatus = before.get("status").asText();
+            
+            UUID orderId = UUID.fromString(orderIdStr);
             
             log.info("Order updated via Debezium: orderId={}, status: {} -> {}", 
                     orderId, previousStatus, newStatus);
             
-            // Here you could trigger additional business logic
-            // For example, notify other services about the status change
+            // Check if order was cancelled
+            if ("CANCELLED".equalsIgnoreCase(newStatus) && !"CANCELLED".equalsIgnoreCase(previousStatus)) {
+                String cancelledBy = after.has("updated_by") ? after.get("updated_by").asText() : "system";
+                String cancellationReason = after.has("cancellation_reason") ? 
+                    after.get("cancellation_reason").asText() : "Order cancelled via Debezium";
+                
+                log.info("Order cancelled via Debezium: orderId={}, cancelledBy={}, reason={}", 
+                        orderId, cancelledBy, cancellationReason);
+                
+                // Create and publish ORDER_CANCELLED event for inventory service
+                OrderCancelledEvent orderCancelledEvent = new OrderCancelledEvent(orderId, cancelledBy, cancellationReason);
+                kafkaOrderEventProducer.publishOrderCancelled(orderCancelledEvent);
+                
+                log.info("Successfully published ORDER_CANCELLED event for order: {}", orderId);
+            }
             
         } catch (Exception e) {
             log.error("Error handling order updated event", e);
@@ -123,12 +147,24 @@ public class DebeziumOrderEventConsumer {
     private void handleOrderDeleted(JsonNode event) {
         try {
             JsonNode before = event.get("payload").get("before");
-            String orderId = before.get("id").asText();
+            String orderIdStr = before.get("id").asText();
+            
+            UUID orderId = UUID.fromString(orderIdStr);
             
             log.info("Order deleted via Debezium: orderId={}", orderId);
             
-            // Here you could trigger additional business logic
-            // For example, cleanup related data or notify other services
+            // Treat deletion as cancellation for inventory purposes
+            String cancelledBy = before.has("updated_by") ? before.get("updated_by").asText() : "system";
+            String cancellationReason = "Order deleted via Debezium";
+            
+            log.info("Order deleted - treating as cancellation: orderId={}, cancelledBy={}", 
+                    orderId, cancelledBy);
+            
+            // Create and publish ORDER_CANCELLED event for inventory service
+            OrderCancelledEvent orderCancelledEvent = new OrderCancelledEvent(orderId, cancelledBy, cancellationReason);
+            kafkaOrderEventProducer.publishOrderCancelled(orderCancelledEvent);
+            
+            log.info("Successfully published ORDER_CANCELLED event for deleted order: {}", orderId);
             
         } catch (Exception e) {
             log.error("Error handling order deleted event", e);

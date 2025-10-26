@@ -119,12 +119,94 @@ app.event-publishing.strategy=debezium
 
 ## 📊 Event Flow
 
-### With Debezium
+### With Debezium (Fixed Implementation)
 ```
-Database Change → Debezium → Kafka Topic → Consumer Service
+Database Change → Debezium → Raw CDC Topics → DebeziumOrderEventConsumer → Application Topics → Inventory Service
 ```
+
+**Detailed Flow:**
+1. **Database Change**: Order created/updated in `trackops_orders` database
+2. **Debezium Capture**: Connector captures change and publishes to `trackops_orders.public.orders`
+3. **Event Transformation**: `DebeziumOrderEventConsumer` processes CDC events and transforms them:
+   - Order creation → `ORDER_CREATED` event
+   - Order cancellation → `ORDER_CANCELLED` event
+4. **Application Events**: Events published to application topics (`ORDER_CREATED`, `ORDER_CANCELLED`)
+5. **Inventory Service**: Consumes application events for inventory management
 
 ### With Outbox Pattern
 ```
 Application → Outbox Table → Event Relay → Kafka Topic → Consumer Service
+```
+
+## 🔧 Event Transformation Details
+
+The `DebeziumOrderEventConsumer` bridges Debezium CDC events to application events:
+
+- **Source Topics**: `trackops_orders.public.orders` (raw Debezium CDC events)
+- **Target Topics**: `ORDER_CREATED`, `ORDER_CANCELLED` (application events)
+- **Event Mapping**:
+  - Database INSERT → `ORDER_CREATED` event
+  - Database UPDATE (status=CANCELLED) → `ORDER_CANCELLED` event
+  - Database DELETE → `ORDER_CANCELLED` event (treated as cancellation)
+
+## 🧪 Testing the Flow
+
+Use the provided test scripts to verify the complete flow:
+
+```bash
+# Test basic Debezium flow
+./test-debezium-flow.sh
+
+# Test Redis cache integration
+./test-redis-cache-integration.sh
+```
+
+These scripts will:
+1. Check infrastructure services are running
+2. Verify Debezium connector status
+3. Check Kafka topics have messages
+4. Test Redis cache invalidation and warming
+5. Provide manual testing commands
+
+## 🔄 Redis Cache Integration
+
+### Cache Invalidation Strategy
+
+The Debezium Redis Cache Integration provides real-time cache invalidation:
+
+- **DebeziumRedisCacheConsumer**: Listens to Debezium CDC events and invalidates related cache entries
+- **DebeziumRedisCacheWarmer**: Proactively updates cache with fresh data from database changes
+
+### Cache Patterns Invalidated
+
+When database changes occur, the following cache patterns are invalidated:
+
+- `order:entity:{orderId}` - Full order objects
+- `order:response:{orderId}` - API response objects  
+- `order:status:{orderId}` - Order status cache
+- `orders:status:{status}` - Orders by status
+- `orders:customer:{customerId}` - Orders by customer
+- `orders:page:*` - Paginated results
+
+### Cache Warming Strategy
+
+Cache warming proactively updates cache entries with fresh data:
+
+- **Order Status**: Automatically updated when order status changes
+- **Order Entities**: Can be warmed for frequently accessed orders
+- **TTL Management**: Configurable TTL for different cache types
+
+### Configuration
+
+```properties
+# Cache TTL Configuration
+app.cache.ttl.order=3600          # Order entities: 1 hour
+app.cache.ttl.status=1800        # Order status: 30 minutes
+app.cache.ttl.response=1800       # API responses: 30 minutes
+app.cache.ttl.customer=3600      # Customer orders: 1 hour
+app.cache.ttl.page=900           # Page results: 15 minutes
+
+# Cache Features
+app.cache.warming.enabled=true    # Enable cache warming
+app.cache.invalidation.enabled=true # Enable cache invalidation
 ```
