@@ -46,9 +46,6 @@ public class KafkaOrderEventConsumer {
             log.info("Successfully processed ORDER_CREATED event for order: {}", orderId);
             acknowledgment.acknowledge();
 
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize ORDER_CREATED event for order: {} - Invalid JSON format", record.key(), e);
-            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_CREATED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message
@@ -77,9 +74,6 @@ public class KafkaOrderEventConsumer {
             log.info("Successfully processed ORDER_CANCELLED event for order: {}", orderId);
             acknowledgment.acknowledge();
 
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize ORDER_CANCELLED event for order: {} - Invalid JSON format", record.key(), e);
-            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_CANCELLED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message
