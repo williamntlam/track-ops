@@ -159,9 +159,6 @@ public class KafkaConfig {
             deadLetterPublishingRecoverer()
         );
         
-        // Set retry template
-        errorHandler.setRetryTemplate(retryTemplate());
-        
         // Don't retry for certain exceptions
         errorHandler.addNotRetryableExceptions(
             IllegalArgumentException.class,
