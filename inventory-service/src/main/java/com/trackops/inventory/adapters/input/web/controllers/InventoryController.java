@@ -15,7 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -123,6 +125,11 @@ public class InventoryController {
                 .reservedQuantity(0)
                 .unitPrice(request.getUnitPrice())
                 .category(request.getCategory())
+                .minStockLevel(request.getMinStockLevel())
+                .maxStockLevel(request.getMaxStockLevel())
+                .reorderQuantity(request.getReorderQuantity())
+                .isActive(true)
+                .isDiscontinued(false)
                 .build();
             
             InventoryItem savedItem = inventoryItemRepository.save(item);
@@ -162,6 +169,25 @@ public class InventoryController {
                     }
                     if (request.getCategory() != null) {
                         item.setCategory(request.getCategory());
+                    }
+                    if (request.getMinStockLevel() != null) {
+                        item.setMinStockLevel(request.getMinStockLevel());
+                    }
+                    if (request.getMaxStockLevel() != null) {
+                        item.setMaxStockLevel(request.getMaxStockLevel());
+                    }
+                    if (request.getReorderQuantity() != null) {
+                        item.setReorderQuantity(request.getReorderQuantity());
+                    }
+                    if (request.getIsActive() != null) {
+                        item.setIsActive(request.getIsActive());
+                    }
+                    if (request.getIsDiscontinued() != null) {
+                        if (request.getIsDiscontinued()) {
+                            item.discontinue();
+                        } else {
+                            item.reactivate();
+                        }
                     }
                     
                     InventoryItem updatedItem = inventoryItemRepository.save(item);
@@ -226,6 +252,30 @@ public class InventoryController {
             
         } catch (Exception e) {
             log.error("Error retrieving inventory statistics: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    /**
+     * Get inventory health summary
+     */
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> getInventoryHealth() {
+        try {
+            var healthSummary = inventoryService.getInventoryHealth();
+            
+            Map<String, Object> healthStatus = new HashMap<>();
+            healthStatus.put("totalItems", healthSummary.getTotalItems());
+            healthStatus.put("activeItems", healthSummary.getActiveItems());
+            healthStatus.put("lowStockItems", healthSummary.getLowStockItems());
+            healthStatus.put("outOfStockItems", healthSummary.getOutOfStockItems());
+            healthStatus.put("discontinuedItems", healthSummary.getDiscontinuedItems());
+            healthStatus.put("timestamp", System.currentTimeMillis());
+            
+            return ResponseEntity.ok(healthStatus);
+            
+        } catch (Exception e) {
+            log.error("Error retrieving inventory health: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

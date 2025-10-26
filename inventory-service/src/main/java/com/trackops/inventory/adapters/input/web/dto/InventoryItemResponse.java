@@ -24,6 +24,14 @@ public class InventoryItemResponse {
     private Integer reservedQuantity;
     private BigDecimal unitPrice;
     private String category;
+    private Integer minStockLevel;
+    private Integer maxStockLevel;
+    private Integer reorderQuantity;
+    private Boolean isActive;
+    private Boolean isDiscontinued;
+    private Boolean isLowStock;
+    private Boolean isOutOfStock;
+    private Boolean needsReordering;
     private Instant createdAt;
     private Instant updatedAt;
     private Long version;
@@ -38,6 +46,14 @@ public class InventoryItemResponse {
             .reservedQuantity(item.getReservedQuantity())
             .unitPrice(item.getUnitPrice())
             .category(item.getCategory())
+            .minStockLevel(item.getMinStockLevel())
+            .maxStockLevel(item.getMaxStockLevel())
+            .reorderQuantity(item.getReorderQuantity())
+            .isActive(item.getIsActive())
+            .isDiscontinued(item.getIsDiscontinued())
+            .isLowStock(item.isLowStock())
+            .isOutOfStock(item.isOutOfStock())
+            .needsReordering(item.needsReordering())
             .createdAt(item.getCreatedAt())
             .updatedAt(item.getUpdatedAt())
             .version(item.getVersion())

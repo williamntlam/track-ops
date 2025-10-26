@@ -3,6 +3,8 @@ package com.trackops.server.domain.model.orders;
 import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
+import java.util.ArrayList;
 import com.trackops.server.domain.model.enums.OrderStatus;
 import com.trackops.server.domain.model.orders.Address;
 import jakarta.persistence.*;
@@ -33,6 +35,9 @@ public class Order {
     
     @Column(name = "delivery_instructions", length = 500)
     private String deliveryInstructions;
+    
+    @OneToMany(mappedBy = "orderId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OrderItem> orderItems = new ArrayList<>();
     
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -96,6 +101,9 @@ public class Order {
     
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
+    
+    public List<OrderItem> getOrderItems() { return orderItems; }
+    public void setOrderItems(List<OrderItem> orderItems) { this.orderItems = orderItems; }
 
     // Business methods
     public void confirm() {
@@ -149,5 +157,34 @@ public class Order {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
+    }
+    
+    // Business methods for order items
+    public void addOrderItem(OrderItem orderItem) {
+        if (orderItem == null) {
+            throw new IllegalArgumentException("Order item cannot be null");
+        }
+        orderItem.setOrderId(this.id);
+        this.orderItems.add(orderItem);
+        this.totalAmount = calculateTotalAmount();
+    }
+    
+    public void removeOrderItem(OrderItem orderItem) {
+        if (orderItem != null) {
+            this.orderItems.remove(orderItem);
+            this.totalAmount = calculateTotalAmount();
+        }
+    }
+    
+    public BigDecimal calculateTotalAmount() {
+        return orderItems.stream()
+            .map(OrderItem::getTotalPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    
+    public List<OrderItem> getOrderItemsByProductId(String productId) {
+        return orderItems.stream()
+            .filter(item -> item.getProductId().equals(productId))
+            .toList();
     }
 }

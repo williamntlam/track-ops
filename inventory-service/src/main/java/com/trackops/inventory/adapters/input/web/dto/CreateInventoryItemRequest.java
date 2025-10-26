@@ -35,4 +35,13 @@ public class CreateInventoryItemRequest {
     
     @Size(max = 100, message = "Category must not exceed 100 characters")
     private String category;
+    
+    @Min(value = 0, message = "Minimum stock level must be non-negative")
+    private Integer minStockLevel;
+    
+    @Min(value = 0, message = "Maximum stock level must be non-negative")
+    private Integer maxStockLevel;
+    
+    @Min(value = 0, message = "Reorder quantity must be non-negative")
+    private Integer reorderQuantity;
 }

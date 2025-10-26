@@ -1,121 +1,92 @@
-# Real-Time Order Tracking System – Caching, Kafka, Kubernetes Practice Project
+# TrackOps - Real-Time Order Tracking System
 
-## 🛠️ Project Summary
+A scalable microservices-based order tracking system built with Spring Boot, Kafka, Redis, and PostgreSQL.
 
-Build a scalable, real-time backend system inspired by services like Uber Eats or Amazon Logistics. Practice integrating caching strategies, Kafka for event streaming, and Kubernetes for deployment and orchestration.
+## 🚀 Quick Start
 
----
+### Prerequisites
+- Java 21+
+- Docker & Docker Compose
+- PostgreSQL 15+
+- Redis 7+
+- Apache Kafka 3.6+
 
-## 🧱 Tech Stack
+### Start the System
 
-| Feature | Technology | Role |
-| --- | --- | --- |
-| Message Queue | Apache Kafka | Stream order status updates |
-| Cache | Redis | Fast access to order status and delivery location |
-| Database | PostgreSQL / MongoDB | Persistent order and user data |
-| Backend API | Node.js / FastAPI / Spring Boot | REST/gRPC service for business logic |
-| Frontend | React / Angular / Next.js | Real-time UI for tracking orders |
-| Containerization | Docker + Kubernetes | Deployment and orchestration |
-| Monitoring | Prometheus + Grafana | Metrics and visualization |
-| Logging | ELK Stack or Loki | Centralized log collection and analysis |
+1. **Start Infrastructure**
+   ```bash
+   ./start-infrastructure.sh
+   ```
 
----
+2. **Start Microservices**
+   ```bash
+   # Server (Order Service)
+   cd server && ./gradlew bootRun --args='--spring.profiles.active=docker'
+   
+   # Inventory Service
+   cd inventory-service && ./gradlew bootRun --args='--spring.profiles.active=docker'
+   
+   # Event Relay Service
+   cd event-relay-service && ./gradlew bootRun --args='--spring.profiles.active=docker'
+   ```
 
-## ⚙️ System Behavior
+3. **Access Services**
+   - Server: http://localhost:8081
+   - Inventory: http://localhost:8082
+   - Event Relay: http://localhost:8083
+   - Kafka UI: http://localhost:8080
+   - pgAdmin: http://localhost:5050
 
-### 1. 🚚 Placing an Order
+## 📚 Documentation
 
-- Order written to DB
-- Redis caches initial status (`PENDING`)
-- Kafka emits event: `ORDER_CREATED`
-- Inventory Service consumes event and reserves inventory
-- Inventory Service publishes `INVENTORY_RESERVED` or `INVENTORY_RESERVATION_FAILED`
-- Order Service updates status based on inventory response
+All documentation is organized in the [`docs/`](./docs/) directory:
 
-### 2. 📦 Processing Orders
+- **[Main Documentation](./docs/README.md)** - Complete project overview
+- **[Server Documentation](./docs/server/README.md)** - Order service details
+- **[Inventory Service](./docs/inventory-service/README.md)** - Inventory management
+- **[Event Relay Service](./docs/event-relay-service/README.md)** - Event publishing
+- **[Docker Setup](./docs/docker/README.md)** - Container configuration
+- **[Docker Setup Guide](./docs/docker/DOCKER-SETUP.md)** - Complete setup instructions
+- **[Architecture](./docs/architecture/)** - System design patterns
+- **[API Reference](./docs/api/)** - API documentation
+- **[Learning Resources](./docs/learning/)** - Tutorials and guides
 
-- Kafka consumer updates status to `PREPARING`, `IN_TRANSIT`, `DELIVERED`
-- Each update:
-    - Written to DB (write-through)
-    - Updated in Redis cache
-    - Emitted via Kafka topic `ORDER_STATUS_UPDATED`
+## 🏗️ Architecture
 
-### 3. 📲 Frontend Real-time Updates
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Server        │    │  Inventory      │    │  Event Relay    │
+│   (Orders)      │    │  Service        │    │  Service        │
+│   :8081         │    │  :8082          │    │  :8083          │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+         ┌───────────────────────┼───────────────────────┐
+         │                       │                       │
+┌────────▼────────┐    ┌────────▼────────┐    ┌────────▼────────┐
+│ PostgreSQL      │    │ Redis           │    │ Kafka           │
+│ (3 databases)   │    │ (caching)       │    │ (messaging)     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-- Frontend polls API or uses WebSocket
-- Retrieves latest order status from Redis
+## 🛠️ Technology Stack
 
-### 4. 🏪 Microservices Architecture
+- **Backend**: Spring Boot 3.2.0, Java 21
+- **Database**: PostgreSQL 15
+- **Cache**: Redis 7
+- **Messaging**: Apache Kafka 3.6
+- **Containerization**: Docker, Docker Compose
+- **Monitoring**: Prometheus, Grafana
 
-- **Order Service** (Port 8080): Manages order lifecycle and business logic
-- **Inventory Service** (Port 8081): Handles inventory reservations and releases  
-- **Event Relay Service** (Port 8082): Change Data Capture (CDC) and event publishing
-- **Event-Driven Communication**: Services communicate via Kafka events
-- **Distributed Transactions**: SAGA pattern for complex workflows
-- **Outbox Pattern**: Reliable event publishing with retry mechanisms
+## 🤝 Contributing
 
----
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
 
-## 🧪 What You'll Practice
+## 📄 License
 
-### 🔄 Caching Concepts
-
-- Cache-aside and write-through caching
-- Redis TTL and eviction strategy
-- Preventing stale reads
-
-### 🧵 Kafka Event Streaming
-
-- Kafka producers and consumers
-- Handling retries, backoff, DLQs
-- Event replay support
-- Change Data Capture (CDC) patterns
-
-### 🏢 Microservices Architecture
-
-- Service decomposition and domain boundaries
-- Event-driven communication patterns
-- Outbox pattern for reliable messaging
-- Database per service pattern
-- Service-to-service communication
-
-### 🧊 Kubernetes + DevOps
-
-- Deploy multiple microservices in Kubernetes
-- Use Helm or Kustomize
-- Set up liveness/readiness probes
-- Auto-scaling services
-- Service mesh and networking
-
-### 🔍 Observability
-
-- Prometheus metrics (cache hit rates, Kafka lag)
-- Grafana dashboards
-- Logging with ELK or Loki
-- Distributed tracing across services
-
----
-
-## 🧠 Optional Enhancements
-
-- Rate limiting with Redis
-- Circuit breaker using Resilience4j
-- gRPC-based microservices (e.g. Delivery, Payment)
-- Alerting with Prometheus Alertmanager
-
----
-
-## 🔑 Key Takeaways
-
-- Real-world caching strategies and cache invalidation
-- Event-driven system design using Kafka
-- State management across distributed services
-- Deployment, monitoring, and scaling using Kubernetes
-
----
-
-## 💡 Ideas for Expansion
-
-- Add a delivery ETA prediction model
-- Implement multi-region deployment with federation
-- Integrate with payment processors (Stripe mock)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -11,6 +11,7 @@ import com.trackops.inventory.ports.output.events.InventoryEventProducer;
 import com.trackops.inventory.ports.output.persistence.InventoryItemRepository;
 import com.trackops.inventory.ports.output.persistence.InventoryReservationRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +71,18 @@ public class InventoryService implements OrderEventProcessorPort {
                 try {
                     InventoryItem item = inventoryItemRepository.findByProductId(request.getProductId())
                         .orElseThrow(() -> new RuntimeException("Product not found: " + request.getProductId()));
+                    
+                    // Check business rules before reservation
+                    if (!item.isAvailableForReservation()) {
+                        failedItems.add(new InventoryReservationFailedEvent.FailedItem(
+                            request.getProductId(),
+                            item.getProductName(),
+                            request.getQuantity(),
+                            item.getAvailableQuantity(),
+                            item.getIsDiscontinued() ? "Product is discontinued" : "Product is inactive"
+                        ));
+                        continue;
+                    }
                     
                     if (item.hasAvailableQuantity(request.getQuantity())) {
                         // Reserve the inventory
@@ -242,5 +255,126 @@ public class InventoryService implements OrderEventProcessorPort {
         
         public String getProductId() { return productId; }
         public Integer getQuantity() { return quantity; }
+    }
+    
+    /**
+     * Scheduled task to clean up expired reservations
+     * Runs every 5 minutes
+     */
+    @Scheduled(fixedDelay = 300000) // 5 minutes
+    @Transactional
+    public void cleanupExpiredReservations() {
+        try {
+            Instant now = Instant.now();
+            List<InventoryReservation> expiredReservations = reservationRepository.findExpiredReservations(now);
+            
+            if (!expiredReservations.isEmpty()) {
+                log.info("Found {} expired reservations to clean up", expiredReservations.size());
+                
+                for (InventoryReservation reservation : expiredReservations) {
+                    try {
+                        // Release the inventory
+                        InventoryItem item = inventoryItemRepository.findByProductId(reservation.getProductId())
+                            .orElse(null);
+                        
+                        if (item != null) {
+                            item.releaseQuantity(reservation.getQuantity());
+                            inventoryItemRepository.save(item);
+                            
+                            log.info("Released {} units of product {} from expired reservation {}", 
+                                    reservation.getQuantity(), reservation.getProductId(), reservation.getId());
+                        }
+                        
+                        // Mark reservation as expired
+                        reservation.markAsExpired();
+                        reservationRepository.save(reservation);
+                        
+                    } catch (Exception e) {
+                        log.error("Failed to cleanup expired reservation {}: {}", 
+                                reservation.getId(), e.getMessage(), e);
+                    }
+                }
+                
+                log.info("Successfully cleaned up {} expired reservations", expiredReservations.size());
+            }
+            
+        } catch (Exception e) {
+            log.error("Error during expired reservation cleanup: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Scheduled task to check for low stock items
+     * Runs every hour
+     */
+    @Scheduled(fixedDelay = 3600000) // 1 hour
+    @Transactional
+    public void checkLowStockItems() {
+        try {
+            List<InventoryItem> allItems = inventoryItemRepository.findAll();
+            List<InventoryItem> lowStockItems = allItems.stream()
+                .filter(InventoryItem::isLowStock)
+                .toList();
+            
+            if (!lowStockItems.isEmpty()) {
+                log.warn("Found {} items with low stock levels", lowStockItems.size());
+                
+                for (InventoryItem item : lowStockItems) {
+                    log.warn("Low stock alert: Product {} ({}) has {} available, minimum is {}", 
+                            item.getProductId(), item.getProductName(), 
+                            item.getAvailableQuantity(), item.getMinStockLevel());
+                    
+                    // In a real system, you might:
+                    // 1. Send notifications to warehouse staff
+                    // 2. Create reorder requests
+                    // 3. Update supplier systems
+                    // 4. Send alerts to management
+                }
+            }
+            
+        } catch (Exception e) {
+            log.error("Error checking low stock items: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Get inventory health summary
+     */
+    public InventoryHealthSummary getInventoryHealth() {
+        List<InventoryItem> allItems = inventoryItemRepository.findAll();
+        
+        long totalItems = allItems.size();
+        long activeItems = allItems.stream().mapToLong(item -> item.getIsActive() ? 1 : 0).sum();
+        long lowStockItems = allItems.stream().mapToLong(item -> item.isLowStock() ? 1 : 0).sum();
+        long outOfStockItems = allItems.stream().mapToLong(item -> item.isOutOfStock() ? 1 : 0).sum();
+        long discontinuedItems = allItems.stream().mapToLong(item -> item.getIsDiscontinued() ? 1 : 0).sum();
+        
+        return new InventoryHealthSummary(totalItems, activeItems, lowStockItems, outOfStockItems, discontinuedItems);
+    }
+    
+    /**
+     * Inventory health summary
+     */
+    public static class InventoryHealthSummary {
+        private final long totalItems;
+        private final long activeItems;
+        private final long lowStockItems;
+        private final long outOfStockItems;
+        private final long discontinuedItems;
+        
+        public InventoryHealthSummary(long totalItems, long activeItems, long lowStockItems, 
+                                   long outOfStockItems, long discontinuedItems) {
+            this.totalItems = totalItems;
+            this.activeItems = activeItems;
+            this.lowStockItems = lowStockItems;
+            this.outOfStockItems = outOfStockItems;
+            this.discontinuedItems = discontinuedItems;
+        }
+        
+        public long getTotalItems() { return totalItems; }
+        public long getActiveItems() { return activeItems; }
+        public long getLowStockItems() { return lowStockItems; }
+        public long getOutOfStockItems() { return outOfStockItems; }
+        public long getDiscontinuedItems() { return discontinuedItems; }
     }
 }
