@@ -15,6 +15,11 @@ import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.retry.backoff.ExponentialBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -107,5 +112,62 @@ public class KafkaConfig {
     @Bean
     public NewTopic inventoryReleasedTopic() {
         return new NewTopic("INVENTORY_RELEASED", 3, (short) 1);
+    }
+
+    // Dead Letter Queue Topics for Debezium Consumers
+    @Bean
+    public NewTopic debeziumOrderEventDlqTopic() {
+        return new NewTopic("debezium-order-event-dlq", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic debeziumCacheConsumerDlqTopic() {
+        return new NewTopic("debezium-cache-consumer-dlq", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic debeziumCacheWarmerDlqTopic() {
+        return new NewTopic("debezium-cache-warmer-dlq", 3, (short) 1);
+    }
+
+    // Dead Letter Queue Configuration
+    @Bean
+    public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer() {
+        return new DeadLetterPublishingRecoverer(kafkaTemplate());
+    }
+
+    @Bean
+    public RetryTemplate retryTemplate() {
+        RetryTemplate retryTemplate = new RetryTemplate();
+        
+        // Retry policy: 3 attempts with exponential backoff
+        ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
+        backOffPolicy.setInitialInterval(1000); // 1 second
+        backOffPolicy.setMultiplier(2.0);
+        backOffPolicy.setMaxInterval(10000); // 10 seconds
+        
+        retryTemplate.setBackOffPolicy(backOffPolicy);
+        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(3));
+        
+        return retryTemplate;
+    }
+
+    @Bean
+    public DefaultErrorHandler debeziumErrorHandler() {
+        // Send to DLQ after 3 retries
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
+            deadLetterPublishingRecoverer()
+        );
+        
+        // Set retry template
+        errorHandler.setRetryTemplate(retryTemplate());
+        
+        // Don't retry for certain exceptions
+        errorHandler.addNotRetryableExceptions(
+            IllegalArgumentException.class,
+            com.fasterxml.jackson.core.JsonProcessingException.class
+        );
+        
+        return errorHandler;
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -20,9 +21,12 @@ import java.util.UUID;
  * Consumer for Debezium CDC events that handles Redis cache warming.
  * This consumer processes database change events captured by Debezium
  * and proactively updates Redis cache entries with fresh data.
+ * 
+ * Only active when app.event-publishing.strategy=debezium
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "app.event-publishing.strategy", havingValue = "debezium")
 @RequiredArgsConstructor
 public class DebeziumRedisCacheWarmer {
     
@@ -45,7 +49,8 @@ public class DebeziumRedisCacheWarmer {
     @KafkaListener(
         topics = "trackops_orders.public.orders",
         groupId = "debezium-cache-warmer",
-        containerFactory = "kafkaListenerContainerFactory"
+        containerFactory = "kafkaListenerContainerFactory",
+        errorHandler = "debeziumErrorHandler"
     )
     public void handleOrderChangeForCacheWarming(
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,

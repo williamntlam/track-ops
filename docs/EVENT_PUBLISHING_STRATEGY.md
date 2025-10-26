@@ -135,6 +135,12 @@ public class EventPublishingService {
 - ✅ With Outbox: Manual cache management
 - ✅ No redundant cache operations
 
+### **Error Handling & Resilience**
+- ✅ Dead Letter Queue (DLQ) for failed messages
+- ✅ Exponential backoff retry (3 attempts)
+- ✅ Non-retryable exception handling
+- ✅ DLQ monitoring and alerting
+
 ---
 
 ## 🎛️ Configuration
@@ -156,6 +162,46 @@ app.event-publishing.strategy=outbox
 cd server && ./gradlew bootRun
 
 # With Debezium strategy
+./start-infrastructure.sh
+./debezium-connectors/setup-debezium-connectors.sh
+cd server && ./gradlew bootRun --args='--app.event-publishing.strategy=debezium'
+```
+
+---
+
+## 🚨 Dead Letter Queue (DLQ) Configuration
+
+### **What is DLQ?**
+A Dead Letter Queue stores messages that fail processing after all retry attempts are exhausted. It prevents message loss and system instability.
+
+### **DLQ Topics**
+- `debezium-order-event-dlq` - Failed order event transformations
+- `debezium-cache-consumer-dlq` - Failed cache invalidation
+- `debezium-cache-warmer-dlq` - Failed cache warming
+
+### **Retry Configuration**
+- **Retry attempts**: 3
+- **Backoff strategy**: Exponential (1s → 2s → 4s → 8s → 10s max)
+- **Non-retryable**: `IllegalArgumentException`, `JsonProcessingException`
+
+### **DLQ Monitoring**
+```bash
+# Check DLQ metrics
+curl http://localhost:8081/api/v1/dlq/metrics
+
+# Check DLQ health
+curl http://localhost:8081/api/v1/dlq/health
+
+# Test DLQ functionality
+./test-dlq-functionality.sh
+```
+
+### **DLQ Benefits**
+- ✅ **Prevents message loss** - Failed messages stored safely
+- ✅ **Prevents consumer lag** - Bad messages don't block processing
+- ✅ **Debugging** - Inspect failed messages to fix issues
+- ✅ **Manual recovery** - Reprocess messages after fixing bugs
+- ✅ **Monitoring** - Alert when DLQ has messages
 cd server && ./gradlew bootRun --args='--app.event-publishing.strategy=debezium'
 ```
 

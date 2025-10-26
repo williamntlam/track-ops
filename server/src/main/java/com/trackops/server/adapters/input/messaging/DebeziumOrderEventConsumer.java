@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -19,9 +20,12 @@ import java.util.UUID;
  * Consumer for Debezium CDC events from the orders table.
  * This consumer processes database change events captured by Debezium
  * and converts them into business events for other services.
+ * 
+ * Only active when app.event-publishing.strategy=debezium
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "app.event-publishing.strategy", havingValue = "debezium")
 @RequiredArgsConstructor
 public class DebeziumOrderEventConsumer {
     
@@ -37,7 +41,8 @@ public class DebeziumOrderEventConsumer {
     @KafkaListener(
         topics = "trackops_orders.public.orders",
         groupId = "debezium-order-consumer",
-        containerFactory = "kafkaListenerContainerFactory"
+        containerFactory = "kafkaListenerContainerFactory",
+        errorHandler = "debeziumErrorHandler"
     )
     public void handleOrderChange(
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
