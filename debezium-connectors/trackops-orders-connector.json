@@ -8,6 +8,7 @@
     "database.password": "password",
     "database.dbname": "trackops_orders",
     "database.server.name": "trackops_orders",
+    "topic.prefix": "trackops_orders",
     "table.include.list": "public.orders,public.order_items",
     "plugin.name": "pgoutput",
     "slot.name": "debezium_orders",
