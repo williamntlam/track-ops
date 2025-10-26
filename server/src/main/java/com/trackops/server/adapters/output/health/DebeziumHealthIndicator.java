@@ -3,7 +3,6 @@ package com.trackops.server.adapters.output.health;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,12 +18,6 @@ import java.util.Map;
 public class DebeziumHealthIndicator implements HealthIndicator {
     
     private static final Logger logger = LoggerFactory.getLogger(DebeziumHealthIndicator.class);
-    
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    
-    public DebeziumHealthIndicator(KafkaTemplate<String, String> kafkaTemplate) {
-        this.kafkaTemplate = kafkaTemplate;
-    }
     
     @Override
     public Health health() {

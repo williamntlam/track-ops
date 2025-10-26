@@ -16,7 +16,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
     
     List<OutboxEvent> findByProcessedFalseOrderByCreatedAt();
     
-    Page<OutboxEvent> findUnprocessedEventsOrderByCreatedAt(Pageable pageable);
+    Page<OutboxEvent> findByProcessedFalseOrderByCreatedAt(Pageable pageable);
     
     @Query("SELECT o FROM OutboxEvent o WHERE o.processed = false AND o.retryCount < o.maxRetries ORDER BY o.createdAt")
     List<OutboxEvent> findRetryableEvents();

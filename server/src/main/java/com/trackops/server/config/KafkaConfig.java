@@ -1,5 +1,6 @@
 package com.trackops.server.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -17,6 +18,9 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.KafkaListenerErrorHandler;
+import org.springframework.kafka.listener.ListenerExecutionFailedException;
+import org.springframework.messaging.Message;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
@@ -25,6 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Configuration
 public class KafkaConfig {
 
@@ -153,18 +158,26 @@ public class KafkaConfig {
     }
 
     @Bean
-    public DefaultErrorHandler debeziumErrorHandler() {
-        // Send to DLQ after 3 retries
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
-            deadLetterPublishingRecoverer()
-        );
-        
-        // Don't retry for certain exceptions
-        errorHandler.addNotRetryableExceptions(
-            IllegalArgumentException.class,
-            com.fasterxml.jackson.core.JsonProcessingException.class
-        );
-        
-        return errorHandler;
+    public KafkaListenerErrorHandler debeziumErrorHandler() {
+        return new KafkaListenerErrorHandler() {
+            @Override
+            public Object handleError(Message<?> message, ListenerExecutionFailedException exception) {
+                log.error("Debezium consumer error occurred", exception);
+                
+                // Log the failed message details
+                if (message != null) {
+                    log.error("Failed message headers: {}", message.getHeaders());
+                    log.error("Failed message payload: {}", message.getPayload());
+                }
+                
+                // For now, we'll just log the error and continue
+                // In production, you might want to:
+                // 1. Send to dead letter queue
+                // 2. Retry with exponential backoff
+                // 3. Alert monitoring systems
+                
+                return null;
+            }
+        };
     }
 }

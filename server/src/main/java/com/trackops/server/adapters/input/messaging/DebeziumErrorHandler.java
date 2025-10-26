@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.listener.KafkaListenerErrorHandler;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.messaging.Message;
-import org.springframework.stereotype.Component;
 
 /**
  * Error handler for Debezium consumers.
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Component;
  * Only active when Debezium strategy is enabled.
  */
 @Slf4j
-@Component("debeziumErrorHandler")
 @ConditionalOnProperty(name = "app.event-publishing.strategy", havingValue = "debezium")
 public class DebeziumErrorHandler implements KafkaListenerErrorHandler {
     
