@@ -75,58 +75,44 @@ fi
 # Step 4: Start Microservices
 print_status "Phase 4: Starting Microservices..."
 
-# Function to start a service in its own terminal
-start_service_in_terminal() {
+# Function to start a service in background
+start_service_background() {
     local service_name=$1
     local service_dir=$2
     local profile=$3
     
-    print_status "Starting $service_name in new terminal..."
+    print_status "Starting $service_name in background..."
     
-    # Detect terminal emulator
-    local terminal_cmd=""
-    if command -v gnome-terminal > /dev/null 2>&1; then
-        terminal_cmd="gnome-terminal"
-    elif command -v xterm > /dev/null 2>&1; then
-        terminal_cmd="xterm"
-    elif command -v konsole > /dev/null 2>&1; then
-        terminal_cmd="konsole"
-    elif command -v alacritty > /dev/null 2>&1; then
-        terminal_cmd="alacritty"
+    # Create logs directory
+    mkdir -p logs
+    
+    # Start service in background
+    cd "$service_dir"
+    nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
+    local pid=$!
+    echo $pid > "../logs/${service_name}.pid"
+    
+    cd ..
+    
+    # Wait a moment for startup
+    sleep 5
+    
+    # Check if process is still running
+    if kill -0 $pid 2>/dev/null; then
+        print_success "$service_name started successfully (PID: $pid)"
     else
-        print_error "No terminal emulator found. Please install gnome-terminal, xterm, konsole, or alacritty"
+        print_error "$service_name failed to start"
         return 1
     fi
-    
-    # Create terminal with service
-    case $terminal_cmd in
-        "gnome-terminal")
-            gnome-terminal --title="$service_name" -- bash -c "cd $service_dir && echo '🚀 Starting $service_name...' && ./gradlew bootRun --args='--spring.profiles.active=$profile'; exec bash"
-            ;;
-        "xterm")
-            xterm -title "$service_name" -e bash -c "cd $service_dir && echo '🚀 Starting $service_name...' && ./gradlew bootRun --args='--spring.profiles.active=$profile'; exec bash" &
-            ;;
-        "konsole")
-            konsole --title "$service_name" -e bash -c "cd $service_dir && echo '🚀 Starting $service_name...' && ./gradlew bootRun --args='--spring.profiles.active=$profile'; exec bash" &
-            ;;
-        "alacritty")
-            alacritty --title "$service_name" -e bash -c "cd $service_dir && echo '🚀 Starting $service_name...' && ./gradlew bootRun --args='--spring.profiles.active=$profile'; exec bash" &
-            ;;
-    esac
-    
-    # Wait a moment for terminal to open
-    sleep 3
-    
-    print_success "$service_name terminal opened successfully"
 }
 
 # Create logs directory
 mkdir -p logs
 
-# Start services in separate terminals
-start_service_in_terminal "Order Service" "server" "docker"
-start_service_in_terminal "Inventory Service" "inventory-service" "docker"
-start_service_in_terminal "Event Relay Service" "event-relay-service" "docker"
+# Start services in background
+start_service_background "Order Service" "server" "docker"
+start_service_background "Inventory Service" "inventory-service" "docker"
+start_service_background "Event Relay Service" "event-relay-service" "docker"
 
 # Wait for services to be ready
 print_status "Waiting for services to be ready..."
@@ -161,20 +147,26 @@ echo ""
 echo "🌐 Service URLs:"
 echo "  - Order Service:     http://localhost:8081"
 echo "  - Inventory Service: http://localhost:8082"
-echo "  - Event Relay Service: http://localhost:8083"
+echo "  - Event Relay Service: http://localhost:8084"
+echo "  - Debezium Connect: http://localhost:8083"
 echo "  - Kafka UI:          http://localhost:8080"
 echo "  - pgAdmin:           http://localhost:5050"
 echo ""
 echo "📊 Monitoring:"
-echo "  - Each service runs in its own terminal window"
-echo "  - Logs are visible in each terminal"
+echo "  - All services run in background"
+echo "  - Service logs: ./logs/"
+echo "  - Service PIDs: ./logs/*.pid"
 echo "  - Docker containers: docker compose ps"
 echo ""
 echo "🛑 To stop all services:"
 echo "  ./stop-all-microservices.sh"
-echo "  (or close the terminal windows manually)"
+echo ""
+echo "📋 To view logs:"
+echo "  tail -f logs/Order\\ Service.log"
+echo "  tail -f logs/Inventory\\ Service.log"
+echo "  tail -f logs/Event\\ Relay\\ Service.log"
 echo ""
 echo "💡 Tips:"
-echo "  - Each terminal shows real-time logs for that service"
-echo "  - You can interact with each service independently"
-echo "  - Close individual terminals to stop specific services"
+echo "  - All services run in background processes"
+echo "  - Logs are saved to ./logs/ directory"
+echo "  - Use ./stop-all-microservices.sh to stop everything"

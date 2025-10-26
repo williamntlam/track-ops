@@ -5,7 +5,6 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +16,6 @@ import java.util.Map;
  * inventory levels, and service performance.
  */
 @Component
-@ConditionalOnBean(InventoryItemRepository.class)
 public class InventoryHealthIndicator implements HealthIndicator {
     
     private static final Logger logger = LoggerFactory.getLogger(InventoryHealthIndicator.class);
