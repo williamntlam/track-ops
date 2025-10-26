@@ -41,7 +41,7 @@ Complete Docker containerization for all TrackOps microservices with databases a
 ./start-infrastructure.sh
 
 # Or manually
-docker-compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper
+docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper
 ./init-databases.sh
 ```
 

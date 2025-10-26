@@ -11,7 +11,7 @@ fi
 
 # Start infrastructure services
 echo "📦 Starting databases and message brokers..."
-docker-compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper
+docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be ready..."
@@ -22,17 +22,17 @@ echo "🔍 Checking service health..."
 
 # Check PostgreSQL services
 echo "Checking PostgreSQL services..."
-docker-compose exec postgres-server pg_isready -U postgres -d trackops_orders
-docker-compose exec postgres-inventory pg_isready -U postgres -d trackops_inventory
-docker-compose exec postgres-event-relay pg_isready -U postgres -d trackops_event_relay
+docker compose exec postgres-server pg_isready -U postgres -d trackops_orders
+docker compose exec postgres-inventory pg_isready -U postgres -d trackops_inventory
+docker compose exec postgres-event-relay pg_isready -U postgres -d trackops_event_relay
 
 # Check Redis
 echo "Checking Redis..."
-docker-compose exec redis redis-cli ping
+docker compose exec redis redis-cli ping
 
 # Check Kafka
 echo "Checking Kafka..."
-docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
+docker compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
 
 # Initialize databases
 echo "🗄️ Initializing databases..."
