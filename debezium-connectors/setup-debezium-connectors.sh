@@ -25,23 +25,33 @@ if [ $attempt -gt $max_attempts ]; then
     exit 1
 fi
 
-# Create the orders connector
-echo "📦 Creating TrackOps Orders connector..."
-response=$(curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d @debezium-connectors/trackops-orders-connector.json \
-  http://localhost:8083/connectors)
+# Check if connector already exists
+echo "🔍 Checking if TrackOps Orders connector already exists..."
+existing_connectors=$(curl -s http://localhost:8083/connectors)
+
+if echo "$existing_connectors" | grep -q "trackops-orders-connector"; then
+    echo "✅ TrackOps Orders connector already exists!"
+    echo "🔄 Restarting connector to apply any configuration changes..."
+    response=$(curl -s -X POST \
+      http://localhost:8083/connectors/trackops-orders-connector/restart)
+else
+    echo "📦 Creating TrackOps Orders connector..."
+    response=$(curl -s -X POST \
+      -H "Content-Type: application/json" \
+      -d @debezium-connectors/trackops-orders-connector.json \
+      http://localhost:8083/connectors)
+fi
 
 if echo "$response" | grep -q "error"; then
-    echo "❌ Failed to create connector: $response"
+    echo "❌ Failed to create/update connector: $response"
     exit 1
 else
-    echo "✅ TrackOps Orders connector created successfully!"
+    echo "✅ TrackOps Orders connector configured successfully!"
 fi
 
 # Verify connector status
 echo "🔍 Verifying connector status..."
-curl -s http://localhost:8083/connectors/trackops-orders-connector/status | jq '.'
+curl -s http://localhost:8083/connectors/trackops-orders-connector/status
 
 echo ""
 echo "🎉 Debezium setup completed!"
