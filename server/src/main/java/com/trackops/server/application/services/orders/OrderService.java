@@ -24,7 +24,7 @@ import com.trackops.server.domain.exceptions.OrderNotFoundException;
 import com.trackops.server.domain.exceptions.OrderValidationException;
 import com.trackops.server.domain.exceptions.InvalidOrderStatusTransitionException;
 import com.trackops.server.application.services.saga.SagaOrchestratorService;
-import com.trackops.server.application.services.outbox.OutboxEventService;
+import com.trackops.server.application.services.events.EventPublishingService;
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
 import com.trackops.server.ports.output.cache.OrderCachePort;
 import com.trackops.server.adapters.output.monitoring.MetricsService;
@@ -52,7 +52,7 @@ public class OrderService implements OrderServicePort {
     private final OrderEventProducer orderEventProducer;
     private final OrderMapper orderMapper;
     private final SagaOrchestratorService sagaOrchestratorService;
-    private final OutboxEventService outboxEventService;
+    private final EventPublishingService eventPublishingService;
     private final OrderStatusCachePort orderStatusCachePort;
     private final OrderCachePort orderCachePort;
     private final MetricsService metricsService;
@@ -60,13 +60,13 @@ public class OrderService implements OrderServicePort {
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
                        OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
-                       OutboxEventService outboxEventService, OrderStatusCachePort orderStatusCachePort,
+                       EventPublishingService eventPublishingService, OrderStatusCachePort orderStatusCachePort,
                        OrderCachePort orderCachePort, MetricsService metricsService, StructuredLoggingService loggingService) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
         this.sagaOrchestratorService = sagaOrchestratorService;
-        this.outboxEventService = outboxEventService;
+        this.eventPublishingService = eventPublishingService;
         this.orderStatusCachePort = orderStatusCachePort;
         this.orderCachePort = orderCachePort;
         this.metricsService = metricsService;
@@ -109,17 +109,12 @@ public class OrderService implements OrderServicePort {
                 throw new RuntimeException("Failed to save order to database");
             }
 
-            // Step 6: Create outbox event (within same transaction)
+            // Step 6: Publish order created event using the configured strategy (Outbox or Debezium)
             try {
-                OrderCreatedEvent event = new OrderCreatedEvent(savedOrder.getId(), "system");
-                outboxEventService.createOrderEvent(
-                    savedOrder.getId().toString(),
-                    "ORDER_CREATED",
-                    event
-                );
+                eventPublishingService.publishOrderCreated(savedOrder);
             } catch (Exception e) {
-                // Log the outbox event creation failure but don't fail the order creation
-                // The outbox event will be retried by the publisher
+                // Log the event publishing failure but don't fail the order creation
+                logger.warn("Failed to publish order created event: {}", e.getMessage());
             }
 
             // Step 7: Cache the new order
@@ -307,22 +302,12 @@ public class OrderService implements OrderServicePort {
                 logger.warn("Failed to update cache for order {}: {}", orderId, e.getMessage());
             }
 
-            // Step 6: Create outbox event (within same transaction)
+            // Step 6: Publish order status updated event using the configured strategy
             try {
-                OrderStatusUpdatedEvent event = new OrderStatusUpdatedEvent(
-                    orderId, 
-                    previousStatus,  // Use the status before update
-                    newStatus, 
-                    updatedOrder.getVersion()
-                );
-                outboxEventService.createOrderEvent(
-                    orderId.toString(),
-                    "ORDER_STATUS_UPDATED",
-                    event
-                );
+                eventPublishingService.publishOrderStatusUpdated(updatedOrder, previousStatus.toString());
             } catch (Exception e) {
-                // Log the outbox event creation failure but don't fail the status update
-                // The outbox event will be retried by the publisher
+                // Log the event publishing failure but don't fail the status update
+                logger.warn("Failed to publish order status updated event: {}", e.getMessage());
             }
             
             // Step 7: Return updated response
@@ -583,23 +568,12 @@ public class OrderService implements OrderServicePort {
                 throw new RuntimeException("Failed to save processed order to database");
             }
             
-            // Step 5: Create outbox event (within same transaction)
+            // Step 5: Publish order status updated event using the configured strategy
             try {
-                OrderStatusUpdatedEvent event = new OrderStatusUpdatedEvent(
-                    orderId, 
-                    previousStatus, 
-                    OrderStatus.PROCESSING, 
-                    updatedOrder.getVersion()
-                );
-                outboxEventService.createOrderEvent(
-                    orderId.toString(),
-                    "ORDER_STATUS_UPDATED",
-                    event
-                );
+                eventPublishingService.publishOrderStatusUpdated(updatedOrder, previousStatus.toString());
             } catch (Exception e) {
                 // Log error but don't fail the processing
-                // The outbox event will be retried by the publisher
-                logger.error("Error occurred trying to process order {}: {}", orderId, e.getMessage());
+                logger.warn("Failed to publish order processing event: {}", e.getMessage());
             }
             
             // Step 6: Return updated response
@@ -639,22 +613,12 @@ public class OrderService implements OrderServicePort {
                 throw new RuntimeException("Failed to save shipped order to database");
             }
             
-            // Step 5: Create outbox event (within same transaction)
+            // Step 5: Publish order status updated event using the configured strategy
             try {
-                OrderStatusUpdatedEvent event = new OrderStatusUpdatedEvent(
-                    orderId, 
-                    previousStatus, 
-                    OrderStatus.SHIPPED, 
-                    updatedOrder.getVersion()
-                );
-                outboxEventService.createOrderEvent(
-                    orderId.toString(),
-                    "ORDER_STATUS_UPDATED",
-                    event
-                );
+                eventPublishingService.publishOrderStatusUpdated(updatedOrder, previousStatus.toString());
             } catch (Exception e) {
                 // Log error but don't fail the shipping
-                // The outbox event will be retried by the publisher
+                logger.warn("Failed to publish order shipping event: {}", e.getMessage());
             }
             
             // Step 6: Return updated response
@@ -694,20 +658,12 @@ public class OrderService implements OrderServicePort {
                 throw new RuntimeException("Failed to save delivered order to database");
             }
             
-            // Step 5: Create outbox event (within same transaction)
+            // Step 5: Publish order status updated event using the configured strategy
             try {
-                OrderDeliveredEvent event = new OrderDeliveredEvent(
-                    orderId, 
-                    LocalDateTime.now() // or get from request
-                );
-                outboxEventService.createOrderEvent(
-                    orderId.toString(),
-                    "ORDER_DELIVERED",
-                    event
-                );
+                eventPublishingService.publishOrderStatusUpdated(updatedOrder, previousStatus.toString());
             } catch (Exception e) {
                 // Log error but don't fail the delivery
-                // The outbox event will be retried by the publisher
+                logger.warn("Failed to publish order delivered event: {}", e.getMessage());
             }
             
             // Step 6: Return updated response
