@@ -48,8 +48,23 @@ fi
 
 print_success "Infrastructure services are ready!"
 
-# Step 2: Setup Debezium (if using Debezium strategy)
-print_status "Phase 2: Setting up Debezium Connectors..."
+# Step 2: Start Debezium Connect (if using Debezium strategy)
+print_status "Phase 2: Starting Debezium Connect..."
+docker compose up -d debezium-connect
+
+# Wait for Debezium Connect to be ready
+print_status "Waiting for Debezium Connect to be ready..."
+for i in {1..30}; do
+    if curl -s http://localhost:8083/connectors > /dev/null 2>&1; then
+        print_success "Debezium Connect is ready!"
+        break
+    fi
+    print_status "Attempt $i/30: Debezium Connect not ready yet..."
+    sleep 2
+done
+
+# Step 3: Setup Debezium Connectors
+print_status "Phase 3: Setting up Debezium Connectors..."
 if [ -f "./debezium-connectors/setup-debezium-connectors.sh" ]; then
     ./debezium-connectors/setup-debezium-connectors.sh
     print_success "Debezium connectors configured!"
@@ -57,8 +72,8 @@ else
     print_warning "Debezium setup script not found, skipping..."
 fi
 
-# Step 3: Start Microservices
-print_status "Phase 3: Starting Microservices..."
+# Step 4: Start Microservices
+print_status "Phase 4: Starting Microservices..."
 
 # Function to start a service in its own terminal
 start_service_in_terminal() {
