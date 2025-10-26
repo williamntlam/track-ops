@@ -34,12 +34,12 @@ public class OutboxEventService {
         try {
             String payload = objectMapper.writeValueAsString(eventData);
             
-            OutboxEvent outboxEvent = new OutboxEvent(
-                aggregateId,
-                eventType,
-                payload,
-                partitionKey
-            );
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                .aggregateId(aggregateId)
+                .eventType(eventType)
+                .payload(payload)
+                .partitionKey(partitionKey)
+                .build();
             
             OutboxEvent savedEvent = outboxEventRepository.save(outboxEvent);
             log.debug("Created outbox event {} for aggregate {}", savedEvent.getId(), aggregateId);

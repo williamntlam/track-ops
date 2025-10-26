@@ -61,7 +61,7 @@ public class OutboxEventPublishingStrategy implements EventPublishingStrategy {
                 order.getId().toString(),
                 order.getStatus().toString(),
                 previousStatus,
-                order.getUpdatedAt()
+                order.getUpdatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
             ));
             
             OutboxEvent event = OutboxEvent.builder()
