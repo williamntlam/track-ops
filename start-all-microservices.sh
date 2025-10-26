@@ -136,7 +136,7 @@ else
 fi
 
 # Check Event Relay Service
-if curl -s http://localhost:8083/actuator/health > /dev/null 2>&1; then
+if curl -s http://localhost:8084/actuator/health > /dev/null 2>&1; then
     print_success "Event Relay Service is healthy"
 else
     print_warning "Event Relay Service health check failed"
