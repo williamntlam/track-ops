@@ -8,7 +8,6 @@ TrackOps implements a **distributed order management system** with:
 - **Event-Driven Architecture** with Kafka for reliable messaging
 - **SAGA Pattern** for distributed transaction management
 - **Outbox Pattern** for reliable event publishing
-- **CQRS** (Command Query Responsibility Segregation) principles
 - **Domain-Driven Design** (DDD) with clear service boundaries
 - **Microservices** with independent databases and deployment
 
@@ -194,9 +193,7 @@ All documentation is organized in the [`docs/`](./docs/) directory:
 |---------|---------------|---------|
 | **Event Sourcing** | Outbox Events | Reliable event publishing |
 | **SAGA Pattern** | Distributed transactions | Cross-service consistency |
-| **CQRS** | Separate read/write models | Performance optimization |
 | **Outbox Pattern** | Database + Kafka | At-least-once delivery |
-| **Circuit Breaker** | Resilience patterns | Fault tolerance |
 | **Idempotency** | Event deduplication | Safe retries |
 
 ### Event Topics
@@ -253,7 +250,6 @@ All documentation is organized in the [`docs/`](./docs/) directory:
 - **Message Partitioning**: Kafka topics with multiple partitions
 
 ### Reliability & Resilience
-- **Circuit Breaker**: Prevent cascade failures
 - **Retry Logic**: Exponential backoff for transient failures
 - **Health Checks**: Comprehensive monitoring
 - **Graceful Degradation**: System continues with reduced functionality
