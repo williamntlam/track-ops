@@ -1,6 +1,7 @@
 package com.trackops.inventory.adapters.input.web.controllers;
 
 import com.trackops.inventory.adapters.input.web.dto.InventoryReservationResponse;
+import com.trackops.inventory.adapters.input.web.dto.ReservationStatsResponse;
 import com.trackops.inventory.domain.model.InventoryReservation;
 import com.trackops.inventory.domain.model.ReservationStatus;
 import com.trackops.inventory.ports.output.persistence.InventoryReservationRepository;

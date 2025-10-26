@@ -2,6 +2,8 @@ package com.trackops.inventory.ports.output.persistence;
 
 import com.trackops.inventory.domain.model.InventoryReservation;
 import com.trackops.inventory.domain.model.ReservationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +20,7 @@ public interface InventoryReservationRepository extends JpaRepository<InventoryR
     List<InventoryReservation> findByOrderId(UUID orderId);
     
     List<InventoryReservation> findByStatus(ReservationStatus status);
+    Page<InventoryReservation> findByStatus(ReservationStatus status, Pageable pageable);
     
     @Query("SELECT r FROM InventoryReservation r WHERE r.orderId = :orderId AND r.status = :status")
     List<InventoryReservation> findByOrderIdAndStatus(@Param("orderId") UUID orderId, @Param("status") ReservationStatus status);

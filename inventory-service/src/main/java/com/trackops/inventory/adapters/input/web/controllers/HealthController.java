@@ -28,8 +28,8 @@ public class HealthController {
             Map<String, Object> healthStatus = new HashMap<>();
             
             // Get inventory-specific health
-            boolean inventoryHealthy = inventoryHealthIndicator.isHealthy();
-            healthStatus.put("inventory", inventoryHealthy ? "UP" : "DOWN");
+            var health = inventoryHealthIndicator.health();
+            healthStatus.put("inventory", health.getStatus().getCode());
             
             // Add timestamp
             healthStatus.put("timestamp", System.currentTimeMillis());

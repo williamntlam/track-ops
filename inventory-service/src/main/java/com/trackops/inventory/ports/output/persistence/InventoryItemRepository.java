@@ -1,6 +1,8 @@
 package com.trackops.inventory.ports.output.persistence;
 
 import com.trackops.inventory.domain.model.InventoryItem;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     Optional<InventoryItem> findByProductId(String productId);
     
     List<InventoryItem> findByCategory(String category);
+    Page<InventoryItem> findByCategory(String category, Pageable pageable);
     
     @Query("SELECT i FROM InventoryItem i WHERE i.availableQuantity >= :quantity")
     List<InventoryItem> findAvailableItemsWithQuantity(@Param("quantity") Integer quantity);
