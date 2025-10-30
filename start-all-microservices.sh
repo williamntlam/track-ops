@@ -139,11 +139,7 @@ start_service_background() {
     
     # Start service in background
     cd "$service_dir"
-    if [ "$profile" = "default" ] || [ -z "$profile" ]; then
-        nohup ./gradlew bootRun > "../logs/${service_name}.log" 2>&1 &
-    else
-        nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
-    fi
+    nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
     local pid=$!
     echo $pid > "../logs/${service_name}.pid"
     
