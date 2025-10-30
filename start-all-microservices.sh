@@ -50,6 +50,57 @@ print_success "Infrastructure services are ready!"
 
 # Step 2: Start Debezium Connect (if using Debezium strategy)
 print_status "Phase 2: Starting Debezium Connect..."
+
+ensure_kafka_healthy() {
+    print_status "Checking Kafka health before starting Debezium Connect..."
+
+    local attempts=40
+    local i
+    for i in $(seq 1 $attempts); do
+        KAFKA_HEALTH=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}unknown{{end}}' trackops-kafka 2>/dev/null || echo "unknown")
+        if [ "$KAFKA_HEALTH" = "healthy" ]; then
+            print_success "Kafka is healthy!"
+            return 0
+        fi
+        # Check for cluster ID mismatch in recent logs
+        if docker compose logs --no-color --tail=200 kafka 2>/dev/null | grep -q "InconsistentClusterIdException"; then
+            print_warning "Detected Kafka InconsistentClusterIdException. Attempting self-heal (reset data volume)."
+            reset_kafka_cluster
+            # After reset, re-check health from the start
+            i=0
+        else
+            print_status "Attempt $i/$attempts: Kafka not healthy yet (status: $KAFKA_HEALTH)..."
+            sleep 3
+        fi
+    done
+
+    print_warning "Kafka did not report healthy within the expected time. Proceeding anyway."
+    return 1
+}
+
+reset_kafka_cluster() {
+    print_status "Stopping Kafka to reset data..."
+    docker compose stop kafka >/dev/null 2>&1 || true
+    docker compose rm -f -s kafka >/dev/null 2>&1 || true
+
+    print_status "Removing Kafka data volume..."
+    docker volume rm track-ops_kafka_data >/dev/null 2>&1 || true
+
+    # Ensure ZooKeeper is running first
+    print_status "Ensuring ZooKeeper is running..."
+    docker compose up -d zookeeper >/dev/null 2>&1
+    sleep 2
+
+    print_status "Starting Kafka fresh..."
+    docker compose up -d kafka
+
+    # Wait briefly for Kafka to initialize
+    sleep 5
+}
+
+# Ensure Kafka is healthy (and self-heal if needed) before starting Debezium Connect
+ensure_kafka_healthy
+
 docker compose up -d debezium-connect
 
 # Wait for Debezium Connect to be ready
@@ -88,7 +139,11 @@ start_service_background() {
     
     # Start service in background
     cd "$service_dir"
-    nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
+    if [ "$profile" = "default" ] || [ -z "$profile" ]; then
+        nohup ./gradlew bootRun > "../logs/${service_name}.log" 2>&1 &
+    else
+        nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
+    fi
     local pid=$!
     echo $pid > "../logs/${service_name}.pid"
     
@@ -96,7 +151,6 @@ start_service_background() {
     
     # Wait a moment for startup
     sleep 5
-    
     # Check if process is still running
     if kill -0 $pid 2>/dev/null; then
         print_success "$service_name started successfully (PID: $pid)"
@@ -110,9 +164,9 @@ start_service_background() {
 mkdir -p logs
 
 # Start services in background
-start_service_background "Order Service" "server" "docker"
-start_service_background "Inventory Service" "inventory-service" "docker"
-start_service_background "Event Relay Service" "event-relay-service" "docker"
+start_service_background "Order Service" "server" "default"
+start_service_background "Inventory Service" "inventory-service" "default"
+start_service_background "Event Relay Service" "event-relay-service" "default"
 
 # Wait for services to be ready
 print_status "Waiting for services to be ready..."
