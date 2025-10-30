@@ -49,11 +49,27 @@ else
     echo "✅ TrackOps Orders connector configured successfully!"
 fi
 
-# Verify connector status
+# Verify connector status (with retry to avoid race right after creation)
 echo "🔍 Verifying connector status..."
-curl -s http://localhost:8083/connectors/trackops-orders-connector/status
+status_max_attempts=30
+status_attempt=1
+while [ $status_attempt -le $status_max_attempts ]; do
+    if curl -sf http://localhost:8083/connectors/trackops-orders-connector/status > /dev/null 2>&1; then
+        echo "✅ Connector status endpoint is available!"
+        break
+    fi
+    echo "⏳ Attempt $status_attempt/$status_max_attempts: status not available yet..."
+    sleep 2
+    ((status_attempt++))
+done
 
-echo ""
+if [ $status_attempt -gt $status_max_attempts ]; then
+    echo "⚠️  Connector status endpoint not available after $status_max_attempts attempts. Proceeding anyway."
+else
+    curl -s http://localhost:8083/connectors/trackops-orders-connector/status
+    echo ""
+fi
+
 echo "🎉 Debezium setup completed!"
 echo ""
 echo "📊 Management URLs:"

@@ -118,6 +118,7 @@ start_service_background "Event Relay Service" "event-relay-service" "docker"
 print_status "Waiting for services to be ready..."
 sleep 10
 
+
 # Check service health
 print_status "Checking service health..."
 
