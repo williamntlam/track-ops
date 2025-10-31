@@ -9,8 +9,6 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import java.util.UUID;
 
 @Slf4j
@@ -30,10 +28,10 @@ public class KafkaOrderEventConsumer {
         groupId = "inventory-service",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderCreated(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderCreated(ConsumerRecord<UUID, String> record, Acknowledgment acknowledgment) {
         try {
             String message = record.value();
-            UUID orderId = UUID.fromString(record.key());
+            UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_CREATED event for order: {} from topic: {}", orderId, topic);
@@ -58,10 +56,10 @@ public class KafkaOrderEventConsumer {
         groupId = "inventory-service",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderCancelled(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderCancelled(ConsumerRecord<UUID, String> record, Acknowledgment acknowledgment) {
         try {
             String message = record.value();
-            UUID orderId = UUID.fromString(record.key());
+            UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_CANCELLED event for order: {} from topic: {}", orderId, topic);
