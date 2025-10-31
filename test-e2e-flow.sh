@@ -80,7 +80,7 @@ echo "----------------------------------------"
 ITEM_1_RESPONSE=$(curl -s -X POST http://localhost:8082/api/inventory/items \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": "PROD-001",
+    "productId": "PROD-0013134232323",
     "productName": "Wireless Headphones",
     "description": "High-quality wireless headphones with noise cancellation",
     "sku": "WH-001",
@@ -103,7 +103,7 @@ fi
 ITEM_2_RESPONSE=$(curl -s -X POST http://localhost:8082/api/inventory/items \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": "PROD-002",
+    "productId": "PROD-003232232322",
     "productName": "Laptop Stand",
     "description": "Ergonomic aluminum laptop stand",
     "sku": "LS-001",
@@ -131,23 +131,12 @@ ORDER_1_RESPONSE=$(curl -s -X POST http://localhost:8081/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customerId": "550e8400-e29b-41d4-a716-446655440000",
-    "items": [
-      {
-        "productId": "PROD-001",
-        "quantity": 2,
-        "price": 99.99
-      },
-      {
-        "productId": "PROD-002",
-        "quantity": 1,
-        "price": 49.99
-      }
-    ],
-    "deliveryAddress": {
-      "street": "123 Main Street",
+    "totalAmount": 249.97,
+    "address": {
+      "streetAddress": "123 Main Street",
       "city": "New York",
       "state": "NY",
-      "zipCode": "10001",
+      "postalCode": "10001",
       "country": "USA"
     },
     "deliveryInstructions": "Leave at front door"
@@ -168,18 +157,12 @@ ORDER_2_RESPONSE=$(curl -s -X POST http://localhost:8081/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customerId": "550e8400-e29b-41d4-a716-446655440001",
-    "items": [
-      {
-        "productId": "PROD-001",
-        "quantity": 1,
-        "price": 99.99
-      }
-    ],
-    "deliveryAddress": {
-      "street": "456 Oak Avenue",
+    "totalAmount": 99.99,
+    "address": {
+      "streetAddress": "456 Oak Avenue",
       "city": "Los Angeles",
       "state": "CA",
-      "zipCode": "90001",
+      "postalCode": "90001",
       "country": "USA"
     }
   }')
@@ -263,9 +246,11 @@ print_status "Step 7: Checking Cache Statistics..."
 echo "------------------------------------------"
 
 CACHE_STATS_ORDER=$(curl -s http://localhost:8081/actuator/cache 2>/dev/null || echo "{}")
-if echo "$CACHE_STATS_ORDER" | jq -e '.' > /dev/null 2>&1; then
+if echo "$CACHE_STATS_ORDER" | jq -e '.status == 500 or .error' > /dev/null 2>&1; then
+    print_warning "Cache endpoint is not available (cache actuator endpoint requires CacheManager configuration)"
+elif echo "$CACHE_STATS_ORDER" | jq -e '.' > /dev/null 2>&1; then
     print_success "Order Service cache statistics retrieved"
-    echo "$CACHE_STATS_ORDER" | jq '.' 2>/dev/null || print_warning "Cache endpoint may not be available"
+    echo "$CACHE_STATS_ORDER" | jq '.' 2>/dev/null
 else
     print_warning "Cache statistics not available"
 fi
