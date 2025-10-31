@@ -37,18 +37,22 @@ if ! command -v jq &> /dev/null; then
     }
 fi
 
+# Service configuration - Update these if services run on different ports
+EVENT_RELAY_SERVICE_HOST=${EVENT_RELAY_SERVICE_HOST:-localhost}
+EVENT_RELAY_SERVICE_PORT=${EVENT_RELAY_SERVICE_PORT:-8084}
+
 # Function to check service health
 check_service_health() {
     local service=$1
     local port=$2
     local url=$3
     
-    print_status "Checking $service health..."
+    print_status "Checking $service health at $url..."
     if curl -s -f "$url" > /dev/null 2>&1; then
         print_success "$service is healthy (port $port)"
         return 0
     else
-        print_error "$service is not responding on port $port"
+        print_error "$service is not responding on port $port at $url"
         return 1
     fi
 }
@@ -64,7 +68,7 @@ echo "----------------------------------------"
 
 check_service_health "Order Service" "8081" "http://localhost:8081/actuator/health"
 check_service_health "Inventory Service" "8082" "http://localhost:8082/actuator/health"
-check_service_health "Event Relay Service" "8084" "http://localhost:8084/actuator/health"
+check_service_health "Event Relay Service" "$EVENT_RELAY_SERVICE_PORT" "http://${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}/actuator/health"
 check_service_health "Debezium Connect" "8083" "http://localhost:8083/connectors"
 
 echo ""

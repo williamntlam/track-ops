@@ -186,11 +186,18 @@ else
     print_warning "Inventory Service health check failed"
 fi
 
+# Event Relay Service Configuration
+EVENT_RELAY_SERVICE_HOST=${EVENT_RELAY_SERVICE_HOST:-localhost}
+EVENT_RELAY_SERVICE_PORT=${EVENT_RELAY_SERVICE_PORT:-8084}
+EVENT_RELAY_SERVICE_URL="http://${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}/actuator/health"
+
 # Check Event Relay Service
-if curl -s http://localhost:8084/actuator/health > /dev/null 2>&1; then
-    print_success "Event Relay Service is healthy"
+print_status "Checking Event Relay Service at $EVENT_RELAY_SERVICE_URL..."
+if curl -s "$EVENT_RELAY_SERVICE_URL" > /dev/null 2>&1; then
+    print_success "Event Relay Service is healthy (${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT})"
 else
-    print_warning "Event Relay Service health check failed"
+    print_warning "Event Relay Service health check failed at ${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}"
+    print_warning "  Make sure the service is running and accessible at: $EVENT_RELAY_SERVICE_URL"
 fi
 
 print_success "🎉 All services started successfully!"
@@ -198,7 +205,7 @@ echo ""
 echo "🌐 Service URLs:"
 echo "  - Order Service:     http://localhost:8081"
 echo "  - Inventory Service: http://localhost:8082"
-echo "  - Event Relay Service: http://localhost:8084"
+echo "  - Event Relay Service: http://${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}"
 echo "  - Debezium Connect: http://localhost:8083"
 echo "  - Kafka UI:          http://localhost:8080"
 echo "  - pgAdmin:           http://localhost:5050"
