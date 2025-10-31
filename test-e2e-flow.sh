@@ -84,10 +84,12 @@ ITEM_1_RESPONSE=$(curl -s -X POST http://localhost:8082/api/inventory/items \
     "productName": "Wireless Headphones",
     "description": "High-quality wireless headphones with noise cancellation",
     "sku": "WH-001",
-    "price": 99.99,
-    "quantity": 100,
+    "unitPrice": 99.99,
+    "availableQuantity": 100,
     "category": "Electronics"
   }')
+
+echo "$ITEM_1_RESPONSE"
 
 if echo "$ITEM_1_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
     ITEM_1_ID=$(echo "$ITEM_1_RESPONSE" | jq -r '.id')
@@ -105,8 +107,8 @@ ITEM_2_RESPONSE=$(curl -s -X POST http://localhost:8082/api/inventory/items \
     "productName": "Laptop Stand",
     "description": "Ergonomic aluminum laptop stand",
     "sku": "LS-001",
-    "price": 49.99,
-    "quantity": 50,
+    "unitPrice": 49.99,
+    "availableQuantity": 50,
     "category": "Accessories"
   }')
 

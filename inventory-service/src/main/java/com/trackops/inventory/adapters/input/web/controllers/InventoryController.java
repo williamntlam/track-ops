@@ -1,9 +1,11 @@
 package com.trackops.inventory.adapters.input.web.controllers;
 
 import com.trackops.inventory.adapters.input.web.dto.*;
+import com.trackops.inventory.adapters.input.web.exception.ErrorResponse;
 import com.trackops.inventory.application.services.InventoryService;
 import com.trackops.inventory.domain.model.InventoryItem;
 import com.trackops.inventory.ports.output.persistence.InventoryItemRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,10 +17,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,7 +36,7 @@ public class InventoryController {
      * Get all inventory items with pagination
      */
     @GetMapping
-    public ResponseEntity<Page<InventoryItemResponse>> getAllItems(
+    public ResponseEntity<?> getAllItems(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "productName") String sortBy,
@@ -58,7 +60,13 @@ public class InventoryController {
             
         } catch (Exception e) {
             log.error("Error retrieving inventory items: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to retrieve inventory items: " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -66,7 +74,7 @@ public class InventoryController {
      * Get inventory item by product ID
      */
     @GetMapping("/{productId}")
-    public ResponseEntity<InventoryItemResponse> getItemByProductId(@PathVariable String productId) {
+    public ResponseEntity<?> getItemByProductId(@PathVariable String productId) {
         try {
             return inventoryItemRepository.findByProductId(productId)
                 .map(InventoryItemResponse::from)
@@ -75,7 +83,13 @@ public class InventoryController {
                 
         } catch (Exception e) {
             log.error("Error retrieving inventory item for product ID {}: {}", productId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to retrieve inventory item for product ID " + productId + ": " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -83,7 +97,7 @@ public class InventoryController {
      * Get available inventory items
      */
     @GetMapping("/available")
-    public ResponseEntity<List<InventoryItemResponse>> getAvailableItems(
+    public ResponseEntity<?> getAvailableItems(
             @RequestParam(required = false) Integer minQuantity) {
         
         try {
@@ -102,7 +116,13 @@ public class InventoryController {
             
         } catch (Exception e) {
             log.error("Error retrieving available inventory items: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to retrieve available inventory items: " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -110,11 +130,23 @@ public class InventoryController {
      * Create new inventory item
      */
     @PostMapping
-    public ResponseEntity<InventoryItemResponse> createItem(@Valid @RequestBody CreateInventoryItemRequest request) {
+    public ResponseEntity<?> createItem(
+            @Valid @RequestBody CreateInventoryItemRequest request,
+            HttpServletRequest httpRequest) {
         try {
+            log.info("Creating inventory item for product ID: {}", request.getProductId());
+            
             // Check if product ID already exists
             if (inventoryItemRepository.existsByProductId(request.getProductId())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                log.warn("Product ID already exists: {}", request.getProductId());
+                ErrorResponse errorResponse = ErrorResponse.builder()
+                    .timestamp(Instant.now())
+                    .status(HttpStatus.CONFLICT.value())
+                    .error("Conflict")
+                    .message("Product ID already exists: " + request.getProductId())
+                    .path(httpRequest.getRequestURI())
+                    .build();
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
             }
             
             InventoryItem item = InventoryItem.builder()
@@ -133,14 +165,21 @@ public class InventoryController {
                 .build();
             
             InventoryItem savedItem = inventoryItemRepository.save(item);
-            log.info("Created inventory item: {} for product: {}", savedItem.getId(), request.getProductId());
+            log.info("Successfully created inventory item: {} for product: {}", savedItem.getId(), request.getProductId());
             
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(InventoryItemResponse.from(savedItem));
                 
         } catch (Exception e) {
-            log.error("Error creating inventory item: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            log.error("Error creating inventory item for product ID {}: {}", request.getProductId(), e.getMessage(), e);
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to create inventory item: " + e.getMessage())
+                .path(httpRequest.getRequestURI())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -148,7 +187,7 @@ public class InventoryController {
      * Update inventory item
      */
     @PutMapping("/{productId}")
-    public ResponseEntity<InventoryItemResponse> updateItem(
+    public ResponseEntity<?> updateItem(
             @PathVariable String productId,
             @Valid @RequestBody UpdateInventoryItemRequest request) {
         
@@ -198,7 +237,13 @@ public class InventoryController {
                 
         } catch (Exception e) {
             log.error("Error updating inventory item for product ID {}: {}", productId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to update inventory item for product ID " + productId + ": " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -206,7 +251,7 @@ public class InventoryController {
      * Delete inventory item
      */
     @DeleteMapping("/{productId}")
-    public ResponseEntity<Void> deleteItem(@PathVariable String productId) {
+    public ResponseEntity<?> deleteItem(@PathVariable String productId) {
         try {
             return inventoryItemRepository.findByProductId(productId)
                 .map(item -> {
@@ -218,7 +263,13 @@ public class InventoryController {
                 
         } catch (Exception e) {
             log.error("Error deleting inventory item for product ID {}: {}", productId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to delete inventory item for product ID " + productId + ": " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -226,7 +277,7 @@ public class InventoryController {
      * Get inventory statistics
      */
     @GetMapping("/stats")
-    public ResponseEntity<InventoryStatsResponse> getInventoryStats() {
+    public ResponseEntity<?> getInventoryStats() {
         try {
             List<InventoryItem> allItems = inventoryItemRepository.findAll();
             
@@ -252,7 +303,13 @@ public class InventoryController {
             
         } catch (Exception e) {
             log.error("Error retrieving inventory statistics: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to retrieve inventory statistics: " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
@@ -260,7 +317,7 @@ public class InventoryController {
      * Get inventory health summary
      */
     @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> getInventoryHealth() {
+    public ResponseEntity<?> getInventoryHealth() {
         try {
             var healthSummary = inventoryService.getInventoryHealth();
             
@@ -276,7 +333,13 @@ public class InventoryController {
             
         } catch (Exception e) {
             log.error("Error retrieving inventory health: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("Failed to retrieve inventory health: " + e.getMessage())
+                .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 }
