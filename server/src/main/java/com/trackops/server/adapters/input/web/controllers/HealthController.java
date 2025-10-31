@@ -29,7 +29,7 @@ import java.util.ArrayList;
  * - /actuator/health/liveness (Kubernetes liveness probe)
  */
 @RestController
-@RequestMapping("/health")
+@RequestMapping("/api/health")
 public class HealthController {
     
     private final HealthIndicator databaseHealthIndicator;

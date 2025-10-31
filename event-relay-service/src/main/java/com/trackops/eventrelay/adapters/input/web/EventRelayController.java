@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/event-relay")
+@RequestMapping("/api/events")
 @RequiredArgsConstructor
 public class EventRelayController {
     
@@ -46,7 +46,7 @@ public class EventRelayController {
     /**
      * Get all unprocessed events with pagination
      */
-    @GetMapping("/events/unprocessed")
+    @GetMapping("/unprocessed")
     public ResponseEntity<Page<OutboxEventResponse>> getUnprocessedEvents(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -71,7 +71,7 @@ public class EventRelayController {
     /**
      * Get events by aggregate ID
      */
-    @GetMapping("/events/aggregate/{aggregateId}")
+    @GetMapping("/aggregate/{aggregateId}")
     public ResponseEntity<List<OutboxEventResponse>> getEventsByAggregateId(@PathVariable String aggregateId) {
         try {
             List<OutboxEvent> events = outboxEventRepository.findByAggregateId(aggregateId);
@@ -89,7 +89,7 @@ public class EventRelayController {
     /**
      * Get events by event type
      */
-    @GetMapping("/events/type/{eventType}")
+    @GetMapping("/type/{eventType}")
     public ResponseEntity<List<OutboxEventResponse>> getEventsByType(@PathVariable String eventType) {
         try {
             List<OutboxEvent> events = outboxEventRepository.findByEventType(eventType);
@@ -107,7 +107,7 @@ public class EventRelayController {
     /**
      * Get a specific event by ID
      */
-    @GetMapping("/events/{eventId}")
+    @GetMapping("/{eventId}")
     public ResponseEntity<OutboxEventResponse> getEventById(@PathVariable UUID eventId) {
         try {
             return outboxEventRepository.findById(eventId)
@@ -123,7 +123,7 @@ public class EventRelayController {
     /**
      * Manually process a specific event
      */
-    @PostMapping("/events/{eventId}/process")
+    @PostMapping("/{eventId}/process")
     public ResponseEntity<Map<String, Object>> processEvent(@PathVariable UUID eventId) {
         try {
             boolean success = eventRelayService.processEventById(eventId);

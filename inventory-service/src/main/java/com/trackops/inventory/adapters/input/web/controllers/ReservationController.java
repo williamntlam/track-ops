@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
-@RequestMapping("/inventory/reservations")
+@RequestMapping("/api/inventory/reservations")
 @RequiredArgsConstructor
 public class ReservationController {
     

@@ -13,7 +13,7 @@ import java.util.Map;
  * Only active when Debezium strategy is enabled.
  */
 @RestController
-@RequestMapping("/api/v1/dlq")
+@RequestMapping("/api/dlq")
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.event-publishing.strategy", havingValue = "debezium")
 public class DeadLetterQueueController {

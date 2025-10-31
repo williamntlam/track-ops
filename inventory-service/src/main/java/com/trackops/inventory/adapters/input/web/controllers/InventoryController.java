@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
-@RequestMapping("/inventory/items")
+@RequestMapping("/api/inventory/items")
 @RequiredArgsConstructor
 public class InventoryController {
     
