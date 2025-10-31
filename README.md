@@ -265,6 +265,45 @@ Order Created → Inventory Reserved → Payment Processed → Order Confirmed
 - **Circuit Breakers**: Prevent cascade failures
 - **Graceful Degradation**: System continues with reduced functionality
 
+### 📊 Monitoring & Observability
+
+#### Health Checks
+- **Application Health**: `/actuator/health` endpoint available on all microservices  
+- **Database Health**: Monitors connection status, query latency, and performance  
+- **Kafka Health**: Tracks topic, partition, and consumer group status  
+- **Redis Health**: Reports cache connectivity, memory usage, and eviction stats  
+- **Debezium Health**: Observes CDC connector lag, state, and throughput  
+- **Cache Health**: Measures cache hit rate, TTL performance, and invalidation patterns  
+
+#### Metrics & Monitoring
+- **Application Metrics**: Collected via Spring Boot Actuator and Micrometer  
+- **Database Metrics**: Includes connection pool usage and query response times  
+- **Kafka Metrics**: Monitors message throughput, lag, and partition utilization  
+- **CDC Metrics**: Tracks Debezium connector lag, event rates, and latency  
+- **Cache Metrics**: Reports hit/miss ratios, TTL efficiency, and cache warming stats  
+- **System Metrics**: CPU, memory, and disk utilization for all microservices  
+- **Prometheus Integration**:  
+  - Centralized metrics aggregation across services  
+  - Scrapes `/actuator/prometheus` endpoints exposed by each service  
+  - Integrates with **Grafana** for real-time dashboards and visualization  
+  - Monitors Kafka lag, CDC event latency, cache hit ratio, and service uptime  
+
+#### Advanced Monitoring Features
+- **Dead Letter Queue Monitoring**: Detects and analyzes failed message deliveries  
+- **Cache Performance**: Evaluates hit/miss ratios and invalidation behavior  
+- **CDC Lag Monitoring**: Compares real-time application events vs. CDC propagation delay  
+- **Event Processing Metrics**: Captures message throughput, latency, and error rates  
+- **SAGA Pattern Monitoring**: Tracks distributed transaction success and rollback rates  
+
+#### Logging
+- **Structured Logging**: JSON-formatted logs for easier parsing and analysis  
+- **Correlation IDs**: Enables cross-service request tracing and debugging  
+- **CDC Event Logging**: Captures end-to-end database change propagation  
+- **Cache Operation Logging**: Logs cache hits, misses, and invalidation triggers  
+- **Error Tracking**: Comprehensive error logs for alerting and recovery  
+- **Audit Trail**: Full business operation tracking for compliance and debugging  
+
+
 ## 🔌 API Endpoints
 
 ### Order Service (Port 8081)
