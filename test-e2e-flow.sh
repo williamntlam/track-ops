@@ -37,6 +37,40 @@ if ! command -v jq &> /dev/null; then
     }
 fi
 
+# Check if uuidgen is available, use fallback if not
+if ! command -v uuidgen &> /dev/null; then
+    uuidgen() {
+        # Fallback UUID generation using /proc/sys/kernel/random/uuid or random generation
+        if [ -f /proc/sys/kernel/random/uuid ]; then
+            cat /proc/sys/kernel/random/uuid
+        else
+            # Generate UUID v4 format manually
+            printf "%04x%04x-%04x-%04x-%04x-%04x%04x%04x\n" \
+                $RANDOM $RANDOM $RANDOM \
+                $((RANDOM & 0x0fff | 0x4000)) \
+                $((RANDOM & 0x3fff | 0x8000)) \
+                $RANDOM $RANDOM $RANDOM
+        fi
+    }
+fi
+
+# Check if openssl is available for random generation
+if ! command -v openssl &> /dev/null; then
+    # Fallback for product ID generation
+    generate_random_hex() {
+        # Use /dev/urandom if available, otherwise use $RANDOM
+        if [ -c /dev/urandom ]; then
+            hexdump -n 8 -e '/1 "%02X"' /dev/urandom
+        else
+            printf "%08X%08X" $RANDOM $RANDOM
+        fi
+    }
+else
+    generate_random_hex() {
+        openssl rand -hex 8 | tr '[:lower:]' '[:upper:]'
+    }
+fi
+
 # Service configuration - Update these if services run on different ports
 EVENT_RELAY_SERVICE_HOST=${EVENT_RELAY_SERVICE_HOST:-localhost}
 EVENT_RELAY_SERVICE_PORT=${EVENT_RELAY_SERVICE_PORT:-8084}
@@ -77,10 +111,14 @@ echo ""
 print_status "Step 2: Creating Inventory Items..."
 echo "----------------------------------------"
 
+# Generate random product IDs
+PRODUCT_ID_1="PROD-$(generate_random_hex)"
+PRODUCT_ID_2="PROD-$(generate_random_hex)"
+
 ITEM_1_RESPONSE=$(curl -s -X POST http://localhost:8082/api/inventory/items \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": "PROD-0013134232323",
+    "productId": "'"$PRODUCT_ID_1"'",
     "productName": "Wireless Headphones",
     "description": "High-quality wireless headphones with noise cancellation",
     "sku": "WH-001",
@@ -103,7 +141,7 @@ fi
 ITEM_2_RESPONSE=$(curl -s -X POST http://localhost:8082/api/inventory/items \
   -H "Content-Type: application/json" \
   -d '{
-    "productId": "PROD-003232232322",
+    "productId": "'"$PRODUCT_ID_2"'",
     "productName": "Laptop Stand",
     "description": "Ergonomic aluminum laptop stand",
     "sku": "LS-001",
@@ -127,10 +165,14 @@ echo ""
 print_status "Step 3: Creating Orders..."
 echo "--------------------------------"
 
+# Generate random customer UUIDs
+CUSTOMER_ID_1=$(uuidgen)
+CUSTOMER_ID_2=$(uuidgen)
+
 ORDER_1_RESPONSE=$(curl -s -X POST http://localhost:8081/api/orders \
   -H "Content-Type: application/json" \
   -d '{
-    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "customerId": "'"$CUSTOMER_ID_1"'",
     "totalAmount": 249.97,
     "address": {
       "streetAddress": "123 Main Street",
@@ -156,7 +198,7 @@ fi
 ORDER_2_RESPONSE=$(curl -s -X POST http://localhost:8081/api/orders \
   -H "Content-Type: application/json" \
   -d '{
-    "customerId": "550e8400-e29b-41d4-a716-446655440001",
+    "customerId": "'"$CUSTOMER_ID_2"'",
     "totalAmount": 99.99,
     "address": {
       "streetAddress": "456 Oak Avenue",
