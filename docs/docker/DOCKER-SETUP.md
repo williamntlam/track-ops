@@ -38,11 +38,11 @@ Complete Docker containerization for all TrackOps microservices with databases a
 ### 1. Start Infrastructure
 ```bash
 # Start all databases and message brokers (includes database initialization)
-./start-infrastructure.sh
+./scripts/start-infrastructure.sh
 
 # Or manually
 docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper
-./init-databases.sh
+./scripts/init-databases.sh
 ```
 
 ### 2. Start Microservices
@@ -112,11 +112,11 @@ cd event-relay-service
 - `event-relay-service/src/main/resources/db/migration/V1__Create_outbox_events_table.sql`
 
 ### Database Initialization Scripts
-- `init-databases.sh` - Comprehensive database setup with tables and sample data
+- `scripts/init-databases.sh` - Comprehensive database setup with tables and sample data
 - `server/setup-database.sql` - Order service specific setup
 - `inventory-service/setup-database.sql` - Inventory service specific setup
 - `event-relay-service/setup-database.sql` - Event relay service specific setup
-- `setup-all-databases.sql` - Complete database setup for all services
+- `scripts/setup-all-databases.sql` - Complete database setup for all services
 
 ## 🐳 Docker Compose Services
 

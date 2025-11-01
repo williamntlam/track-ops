@@ -5,6 +5,9 @@
 
 set -e  # Exit on any error
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -118,7 +121,7 @@ echo "  - Docker volumes preserved"
 echo "  - Database data preserved"
 echo ""
 echo "🚀 To start again:"
-echo "  ./start-all-microservices.sh"
+echo "  ./scripts/start-all-microservices.sh"
 echo ""
 echo "💡 Note:"
 echo "  - Services run in background in single terminal"

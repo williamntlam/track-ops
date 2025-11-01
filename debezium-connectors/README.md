@@ -13,7 +13,7 @@ This directory contains Debezium connector configurations for TrackOps.
 ### 1. Start Infrastructure with Debezium
 ```bash
 # Start all services including Debezium
-./start-infrastructure.sh
+./scripts/start-infrastructure.sh
 ```
 
 ### 2. Setup Debezium Connectors
@@ -155,10 +155,10 @@ Use the provided test scripts to verify the complete flow:
 
 ```bash
 # Test basic Debezium flow
-./test-debezium-flow.sh
+./scripts/test-debezium-flow.sh
 
 # Test Redis cache integration
-./test-redis-cache-integration.sh
+./scripts/test-redis-cache-integration.sh
 ```
 
 These scripts will:

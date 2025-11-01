@@ -117,7 +117,7 @@ TrackOps implements a **sophisticated distributed order management system** feat
 # Clone and start everything
 git clone <repository-url>
 cd track-ops
-./start-all-microservices.sh
+./scripts/start-all-microservices.sh
 ```
 
 This single command will:
@@ -390,13 +390,13 @@ GET    /connectors/{name}/status      # Get connector status
 ### Docker Deployment
 ```bash
 # Start all infrastructure (includes Debezium)
-./start-all-microservices.sh
+./scripts/start-all-microservices.sh
 
 # Or start infrastructure only
-./start-infrastructure.sh
+./scripts/start-infrastructure.sh
 
 # Stop everything
-./stop-all-microservices.sh
+./scripts/stop-all-microservices.sh
 ```
 
 ### Environment Configuration

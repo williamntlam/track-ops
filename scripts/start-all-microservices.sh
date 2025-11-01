@@ -5,6 +5,9 @@
 
 set -e  # Exit on any error
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -39,7 +42,7 @@ print_status "🚀 Starting TrackOps Complete System..."
 
 # Step 1: Start Infrastructure
 print_status "Phase 1: Starting Infrastructure Services..."
-./start-infrastructure.sh
+./scripts/start-infrastructure.sh
 
 if [ $? -ne 0 ]; then
     print_error "Failed to start infrastructure services"
@@ -217,7 +220,7 @@ echo "  - Service PIDs: ./logs/*.pid"
 echo "  - Docker containers: docker compose ps"
 echo ""
 echo "🛑 To stop all services:"
-echo "  ./stop-all-microservices.sh"
+echo "  ./scripts/stop-all-microservices.sh"
 echo ""
 echo "📋 To view logs:"
 echo "  tail -f logs/Order\\ Service.log"
@@ -227,4 +230,4 @@ echo ""
 echo "💡 Tips:"
 echo "  - All services run in background processes"
 echo "  - Logs are saved to ./logs/ directory"
-echo "  - Use ./stop-all-microservices.sh to stop everything"
+echo "  - Use ./scripts/stop-all-microservices.sh to stop everything"

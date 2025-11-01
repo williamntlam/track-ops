@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # TrackOps Infrastructure Startup Script
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 echo "🚀 Starting TrackOps Infrastructure..."
 
 # Check if Docker is running
@@ -48,7 +51,7 @@ done
 
 # Initialize databases
 echo "🗄️ Initializing databases..."
-./init-databases.sh
+./scripts/init-databases.sh
 
 echo "✅ Infrastructure services are ready!"
 echo ""
