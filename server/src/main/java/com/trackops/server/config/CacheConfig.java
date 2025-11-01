@@ -32,9 +32,11 @@ public class CacheConfig {
     @Bean
     @Primary
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        System.out.println("INFO: Creating CacheManager bean for Spring Boot Actuator cache endpoint...");
         // Verify Redis connection is available
         try (RedisConnection connection = connectionFactory.getConnection()) {
             connection.ping();
+            System.out.println("INFO: Redis connection verified successfully during CacheManager initialization");
         } catch (Exception e) {
             // Log the error but don't fail startup - cache will work once Redis is available
             // The actuator endpoint will handle the error gracefully

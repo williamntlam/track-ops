@@ -297,12 +297,12 @@ echo ""
 print_status "Step 7: Checking Cache Statistics..."
 echo "------------------------------------------"
 
-CACHE_STATS_ORDER=$(curl -s -w "\nHTTP_CODE:%{http_code}" http://localhost:8081/actuator/cache 2>/dev/null || echo -e "{}" "\nHTTP_CODE:000")
+CACHE_STATS_ORDER=$(curl -s -w "\nHTTP_CODE:%{http_code}" http://localhost:8081/actuator/caches 2>/dev/null || echo -e "{}" "\nHTTP_CODE:000")
 HTTP_CODE=$(echo "$CACHE_STATS_ORDER" | grep "HTTP_CODE:" | cut -d: -f2)
 CACHE_RESPONSE=$(echo "$CACHE_STATS_ORDER" | grep -v "HTTP_CODE:")
 
 if [ "$HTTP_CODE" = "404" ]; then
-    print_warning "Cache endpoint not found (404). Check if 'cache' is in management.endpoints.web.exposure.include"
+    print_warning "Cache endpoint not found (404). Check if 'caches' is in management.endpoints.web.exposure.include"
     print_warning "Response: $CACHE_RESPONSE"
 elif [ "$HTTP_CODE" = "500" ] || echo "$CACHE_RESPONSE" | jq -e '.status == 500 or .error' > /dev/null 2>&1; then
     ERROR_MSG=$(echo "$CACHE_RESPONSE" | jq -r '.message // .error // "Unknown error"' 2>/dev/null)
@@ -312,9 +312,10 @@ elif [ "$HTTP_CODE" = "500" ] || echo "$CACHE_RESPONSE" | jq -e '.status == 500 
     print_warning "  2. Redis connection is not available"
     print_warning "  3. Service needs to be restarted to load CacheConfig"
     echo "$CACHE_RESPONSE" | jq '.' 2>/dev/null || echo "$CACHE_RESPONSE"
-elif echo "$CACHE_RESPONSE" | jq -e '.caches' > /dev/null 2>&1; then
-    CACHE_COUNT=$(echo "$CACHE_RESPONSE" | jq '.caches | length' 2>/dev/null || echo "0")
-    print_success "Order Service cache statistics retrieved ($CACHE_COUNT cache(s) configured)"
+elif echo "$CACHE_RESPONSE" | jq -e '.cacheManagers' > /dev/null 2>&1; then
+    CACHE_MANAGER_COUNT=$(echo "$CACHE_RESPONSE" | jq '.cacheManagers | length' 2>/dev/null || echo "0")
+    TOTAL_CACHES=$(echo "$CACHE_RESPONSE" | jq '[.cacheManagers[].caches | length] | add' 2>/dev/null || echo "0")
+    print_success "Order Service cache statistics retrieved ($CACHE_MANAGER_COUNT CacheManager(s), $TOTAL_CACHES cache(s) configured)"
     echo "$CACHE_RESPONSE" | jq '.' 2>/dev/null
 elif echo "$CACHE_RESPONSE" | jq -e '.' > /dev/null 2>&1; then
     print_success "Order Service cache endpoint accessible"
