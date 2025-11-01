@@ -4,9 +4,11 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisConnection;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -28,7 +30,17 @@ public class CacheConfig {
      * - page: 900 seconds (15 minutes)
      */
     @Bean
+    @Primary
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        // Verify Redis connection is available
+        try (RedisConnection connection = connectionFactory.getConnection()) {
+            connection.ping();
+        } catch (Exception e) {
+            // Log the error but don't fail startup - cache will work once Redis is available
+            // The actuator endpoint will handle the error gracefully
+            System.err.println("Warning: Redis connection test failed during CacheManager initialization: " + e.getMessage());
+        }
+        
         // Default cache configuration with 1 hour TTL
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofHours(1))

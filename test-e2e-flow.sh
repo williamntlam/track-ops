@@ -272,13 +272,23 @@ print_status "Step 6: Checking Inventory Health..."
 echo "------------------------------------------"
 
 INVENTORY_HEALTH=$(curl -s http://localhost:8082/api/inventory/health)
-if echo "$INVENTORY_HEALTH" | jq -e '.status' > /dev/null 2>&1; then
-    INV_STATUS=$(echo "$INVENTORY_HEALTH" | jq -r '.status')
-    TOTAL_ITEMS=$(echo "$INVENTORY_HEALTH" | jq -r '.totalItems // "N/A"')
-    print_success "Inventory Service Health: $INV_STATUS (Total Items: $TOTAL_ITEMS)"
+if echo "$INVENTORY_HEALTH" | jq -e '.totalItems or .inventory or .status' > /dev/null 2>&1; then
+    # Try different response formats
+    if echo "$INVENTORY_HEALTH" | jq -e '.totalItems' > /dev/null 2>&1; then
+        TOTAL_ITEMS=$(echo "$INVENTORY_HEALTH" | jq -r '.totalItems // "N/A"')
+        ACTIVE_ITEMS=$(echo "$INVENTORY_HEALTH" | jq -r '.activeItems // "N/A"')
+        print_success "Inventory Service Health: Total Items: $TOTAL_ITEMS, Active: $ACTIVE_ITEMS"
+    elif echo "$INVENTORY_HEALTH" | jq -e '.inventory' > /dev/null 2>&1; then
+        INV_STATUS=$(echo "$INVENTORY_HEALTH" | jq -r '.inventory')
+        print_success "Inventory Service Health: $INV_STATUS"
+    elif echo "$INVENTORY_HEALTH" | jq -e '.status' > /dev/null 2>&1; then
+        INV_STATUS=$(echo "$INVENTORY_HEALTH" | jq -r '.status')
+        print_success "Inventory Service Health: $INV_STATUS"
+    fi
     echo "$INVENTORY_HEALTH" | jq '.'
 else
     print_warning "Could not retrieve inventory health"
+    echo "Response: $INVENTORY_HEALTH"
 fi
 
 echo ""
@@ -287,14 +297,31 @@ echo ""
 print_status "Step 7: Checking Cache Statistics..."
 echo "------------------------------------------"
 
-CACHE_STATS_ORDER=$(curl -s http://localhost:8081/actuator/cache 2>/dev/null || echo "{}")
-if echo "$CACHE_STATS_ORDER" | jq -e '.status == 500 or .error' > /dev/null 2>&1; then
-    print_warning "Cache endpoint is not available (cache actuator endpoint requires CacheManager configuration)"
-elif echo "$CACHE_STATS_ORDER" | jq -e '.' > /dev/null 2>&1; then
-    print_success "Order Service cache statistics retrieved"
-    echo "$CACHE_STATS_ORDER" | jq '.' 2>/dev/null
+CACHE_STATS_ORDER=$(curl -s -w "\nHTTP_CODE:%{http_code}" http://localhost:8081/actuator/cache 2>/dev/null || echo -e "{}" "\nHTTP_CODE:000")
+HTTP_CODE=$(echo "$CACHE_STATS_ORDER" | grep "HTTP_CODE:" | cut -d: -f2)
+CACHE_RESPONSE=$(echo "$CACHE_STATS_ORDER" | grep -v "HTTP_CODE:")
+
+if [ "$HTTP_CODE" = "404" ]; then
+    print_warning "Cache endpoint not found (404). Check if 'cache' is in management.endpoints.web.exposure.include"
+    print_warning "Response: $CACHE_RESPONSE"
+elif [ "$HTTP_CODE" = "500" ] || echo "$CACHE_RESPONSE" | jq -e '.status == 500 or .error' > /dev/null 2>&1; then
+    ERROR_MSG=$(echo "$CACHE_RESPONSE" | jq -r '.message // .error // "Unknown error"' 2>/dev/null)
+    print_warning "Cache endpoint returned error (500): $ERROR_MSG"
+    print_warning "This usually means:"
+    print_warning "  1. CacheManager bean is not configured (check CacheConfig.java exists)"
+    print_warning "  2. Redis connection is not available"
+    print_warning "  3. Service needs to be restarted to load CacheConfig"
+    echo "$CACHE_RESPONSE" | jq '.' 2>/dev/null || echo "$CACHE_RESPONSE"
+elif echo "$CACHE_RESPONSE" | jq -e '.caches' > /dev/null 2>&1; then
+    CACHE_COUNT=$(echo "$CACHE_RESPONSE" | jq '.caches | length' 2>/dev/null || echo "0")
+    print_success "Order Service cache statistics retrieved ($CACHE_COUNT cache(s) configured)"
+    echo "$CACHE_RESPONSE" | jq '.' 2>/dev/null
+elif echo "$CACHE_RESPONSE" | jq -e '.' > /dev/null 2>&1; then
+    print_success "Order Service cache endpoint accessible"
+    echo "$CACHE_RESPONSE" | jq '.' 2>/dev/null
 else
-    print_warning "Cache statistics not available"
+    print_warning "Cache statistics not available (HTTP $HTTP_CODE)"
+    echo "Response: $CACHE_RESPONSE"
 fi
 
 echo ""
