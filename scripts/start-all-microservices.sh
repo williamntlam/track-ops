@@ -162,27 +162,47 @@ start_service_background "Order Service" "server" "default"
 start_service_background "Inventory Service" "inventory-service" "default"
 start_service_background "Event Relay Service" "event-relay-service" "default"
 
+# Function to wait for service health with retries
+wait_for_service_health() {
+    local service_name=$1
+    local url=$2
+    local max_attempts=${3:-30}
+    local attempt=1
+    
+    print_status "Waiting for $service_name to be healthy..."
+    
+    while [ $attempt -le $max_attempts ]; do
+        # Use curl -f to fail on HTTP error codes (4xx, 5xx)
+        # Check if we get a successful HTTP response
+        if curl -s -f "$url" > /dev/null 2>&1; then
+            print_success "$service_name is healthy"
+            return 0
+        fi
+        
+        if [ $attempt -lt $max_attempts ]; then
+            echo -n "."
+            sleep 2
+        fi
+        attempt=$((attempt + 1))
+    done
+    
+    print_warning "$service_name health check failed after $max_attempts attempts"
+    print_warning "  Service may still be starting. Check logs: tail -f logs/${service_name}.log"
+    return 1
+}
+
 # Wait for services to be ready
 print_status "Waiting for services to be ready..."
-sleep 10
+print_status "This may take 30-60 seconds for services to fully start..."
 
-
-# Check service health
+# Check service health with retries
 print_status "Checking service health..."
 
 # Check Order Service
-if curl -s http://localhost:8081/actuator/health > /dev/null 2>&1; then
-    print_success "Order Service is healthy"
-else
-    print_warning "Order Service health check failed"
-fi
+wait_for_service_health "Order Service" "http://localhost:8081/actuator/health" 30
 
 # Check Inventory Service
-if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
-    print_success "Inventory Service is healthy"
-else
-    print_warning "Inventory Service health check failed"
-fi
+wait_for_service_health "Inventory Service" "http://localhost:8082/actuator/health" 30
 
 # Event Relay Service Configuration
 EVENT_RELAY_SERVICE_HOST=${EVENT_RELAY_SERVICE_HOST:-localhost}
@@ -190,13 +210,7 @@ EVENT_RELAY_SERVICE_PORT=${EVENT_RELAY_SERVICE_PORT:-8084}
 EVENT_RELAY_SERVICE_URL="http://${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}/actuator/health"
 
 # Check Event Relay Service
-print_status "Checking Event Relay Service at $EVENT_RELAY_SERVICE_URL..."
-if curl -s "$EVENT_RELAY_SERVICE_URL" > /dev/null 2>&1; then
-    print_success "Event Relay Service is healthy (${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT})"
-else
-    print_warning "Event Relay Service health check failed at ${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}"
-    print_warning "  Make sure the service is running and accessible at: $EVENT_RELAY_SERVICE_URL"
-fi
+wait_for_service_health "Event Relay Service" "$EVENT_RELAY_SERVICE_URL" 30
 
 print_success "🎉 All services started successfully!"
 echo ""
