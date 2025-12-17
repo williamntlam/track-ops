@@ -13,6 +13,14 @@ build/
 out/
 *.local
 
+# Gradle
+.gradle/
+**/build/
+**/bin/
+*.class
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
 # Environment variables
 .env
 .env.local
@@ -89,11 +97,15 @@ temp/
 !.vscode/tasks.json
 !.vscode/launch.json
 .idea/
+*.iml
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.project
+.classpath
+.settings/
 
 # OS generated files
 .DS_Store
