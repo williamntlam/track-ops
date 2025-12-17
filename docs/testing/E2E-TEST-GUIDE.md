@@ -24,7 +24,7 @@ This guide provides a comprehensive test order to verify the complete TrackOps a
 ```
 
 **Expected Output:**
-- ✅ Infrastructure services started (PostgreSQL, Redis, Kafka, Zookeeper)
+- ✅ Infrastructure services started (PostgreSQL, Redis, Kafka with KRaft mode)
 - ✅ Debezium Connect running on port 8083
 - ✅ Order Service running on port 8081
 - ✅ Inventory Service running on port 8082

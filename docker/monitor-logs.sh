@@ -134,7 +134,7 @@ if ! docker-compose ps | grep -q "Up"; then
 fi
 
 # Services to monitor
-services=("postgres" "redis" "zookeeper" "kafka" "prometheus" "grafana" "trackops-server")
+services=("postgres" "redis" "kafka" "prometheus" "grafana" "trackops-server")
 
 # Open log monitoring terminals for each running service
 for service in "${services[@]}"; do

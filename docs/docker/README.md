@@ -6,8 +6,7 @@ This directory contains individual Docker Compose service definitions for the Tr
 
 - `postgres.yml` - PostgreSQL database configuration
 - `redis.yml` - Redis cache configuration  
-- `zookeeper.yml` - Zookeeper configuration (required for Kafka)
-- `kafka.yml` - Kafka message broker configuration
+- `kafka.yml` - Kafka message broker configuration (KRaft mode - no ZooKeeper required)
 - `prometheus.yml` - Prometheus monitoring configuration
 - `grafana.yml` - Grafana dashboards configuration
 - `trackops-server.yml` - TrackOps Spring Boot application configuration
@@ -90,8 +89,7 @@ docker-compose -f docker/redis.yml up -d
 
 - PostgreSQL: 5432
 - Redis: 6379
-- Zookeeper: 2181
-- Kafka: 9092
+- Kafka: 9092 (broker), 9093 (controller)
 - Prometheus: 9090
 - Grafana: 3000
 - TrackOps Server: 8080

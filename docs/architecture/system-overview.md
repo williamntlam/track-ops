@@ -57,8 +57,7 @@ TrackOps is a microservices-based order management system built with Spring Boot
 - **Redis 7**: Caching and session storage
 
 ### Messaging
-- **Apache Kafka**: Event streaming platform
-- **Zookeeper**: Kafka coordination
+- **Apache Kafka**: Event streaming platform (KRaft mode - no ZooKeeper required)
 
 ### Infrastructure
 - **Kubernetes**: Container orchestration
@@ -91,7 +90,7 @@ TrackOps is a microservices-based order management system built with Spring Boot
 ### Kubernetes Components
 - **PostgreSQL**: Database service with persistent storage
 - **Redis**: Cache service with persistent storage
-- **Kafka**: Message broker with Zookeeper coordination
+- **Kafka**: Message broker (KRaft mode - no ZooKeeper required)
 - **Application**: Spring Boot service
 
 ### Service Discovery

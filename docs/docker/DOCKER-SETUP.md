@@ -41,7 +41,7 @@ Complete Docker containerization for all TrackOps microservices with databases a
 ./scripts/start-infrastructure.sh
 
 # Or manually
-docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper
+docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka
 ./scripts/init-databases.sh
 ```
 
@@ -127,8 +127,7 @@ cd event-relay-service
 
 ### Message Brokers
 - **redis**: Caching layer (databases 0, 1, 2)
-- **kafka**: Event streaming platform
-- **zookeeper**: Kafka coordination
+- **kafka**: Event streaming platform (KRaft mode - no ZooKeeper required)
 
 ### Management Tools
 - **kafka-ui**: Kafka monitoring interface
@@ -174,8 +173,9 @@ docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost
    - Check database health with provided commands
 
 3. **Kafka Connection Issues**
-   - Ensure Zookeeper is running before Kafka
+   - Kafka uses KRaft mode (no ZooKeeper required)
    - Check Kafka UI at http://localhost:8080
+   - Verify Kafka is healthy: `docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092`
 
 4. **Service Startup Issues**
    - Check logs: `docker-compose logs [service-name]`

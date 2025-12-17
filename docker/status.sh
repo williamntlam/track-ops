@@ -48,7 +48,7 @@ echo ""
 
 # Show service health
 print_status "Service Health Check:"
-services=("postgres" "redis" "zookeeper" "kafka" "prometheus" "grafana" "trackops-server")
+services=("postgres" "redis" "kafka" "prometheus" "grafana" "trackops-server")
 
 for service in "${services[@]}"; do
     if docker-compose ps $service | grep -q "healthy"; then

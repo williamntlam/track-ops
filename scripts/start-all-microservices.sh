@@ -89,12 +89,7 @@ reset_kafka_cluster() {
     print_status "Removing Kafka data volume..."
     docker volume rm track-ops_kafka_data >/dev/null 2>&1 || true
 
-    # Ensure ZooKeeper is running first
-    print_status "Ensuring ZooKeeper is running..."
-    docker compose up -d zookeeper >/dev/null 2>&1
-    sleep 2
-
-    print_status "Starting Kafka fresh..."
+    print_status "Starting Kafka fresh (KRaft mode)..."
     docker compose up -d kafka
 
     # Wait briefly for Kafka to initialize

@@ -14,7 +14,7 @@ fi
 
 # Start infrastructure services
 echo "📦 Starting databases and message brokers..."
-docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka zookeeper debezium-connect
+docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka debezium-connect
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be ready..."

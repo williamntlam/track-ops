@@ -106,10 +106,7 @@ start_service "postgres" "docker/postgres.yml"
 # 2. Start Redis
 start_service "redis" "docker/redis.yml"
 
-# 3. Start Zookeeper
-start_service "zookeeper" "docker/zookeeper.yml"
-
-# 4. Start Kafka (depends on Zookeeper)
+# 3. Start Kafka (KRaft mode - no ZooKeeper required)
 start_service "kafka" "docker/kafka.yml"
 
 # 5. Start Prometheus

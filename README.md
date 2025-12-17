@@ -123,7 +123,7 @@ cd track-ops
 This single command will:
 - Start all PostgreSQL databases (3 separate instances) with CDC enabled
 - Initialize Redis for multi-database caching
-- Launch Kafka with Zookeeper and DLQ topics
+- Launch Kafka with KRaft mode (no ZooKeeper required) and DLQ topics
 - Set up Debezium Connect for CDC
 - Configure Debezium connectors for real-time data capture
 - Set up Kafka UI, Debezium UI, and pgAdmin
@@ -206,7 +206,7 @@ Order Created → Inventory Reserved → Payment Processed → Order Confirmed
 - **Backend**: Spring Boot 3.2.0, Java 21
 - **Database**: PostgreSQL 15 (3 separate instances with CDC)
 - **Cache**: Redis 7 (multi-database caching with TTL)
-- **Messaging**: Apache Kafka 3.6 with Zookeeper
+- **Messaging**: Apache Kafka 4.0+ with KRaft mode (no ZooKeeper required)
 - **CDC**: Debezium 2.4 for Change Data Capture
 - **Containerization**: Docker, Docker Compose
 
