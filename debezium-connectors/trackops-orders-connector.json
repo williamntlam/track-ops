@@ -13,14 +13,50 @@
     "plugin.name": "pgoutput",
     "slot.name": "debezium_orders",
     "publication.name": "debezium_publication",
-    "transforms": "route",
+    
+    "transforms": "extractNewRecordState,renameFields,maskPII,castTypes,insertMetadata,timestampConverter,route",
+    
+    "transforms.extractNewRecordState.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.extractNewRecordState.delete.tombstone.handling.mode": "none",
+    "transforms.extractNewRecordState.drop.tombstones": "false",
+    "transforms.extractNewRecordState.add.fields": "op,source.ts_ms,source.db,source.table",
+    
+    "transforms.renameFields.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
+    "transforms.renameFields.renames": "customer_id:customerId,total_amount:totalAmount,postal_code:postalCode,delivery_instructions:deliveryInstructions,created_at:createdAt,updated_at:updatedAt,order_id:orderId,product_id:productId,product_name:productName,unit_price:unitPrice,total_price:totalPrice,phone_number:phoneNumber,street_address:streetAddress",
+    
+    "transforms.maskPII.type": "org.apache.kafka.connect.transforms.MaskField$Value",
+    "transforms.maskPII.fields": "phoneNumber",
+    "transforms.maskPII.replacement": "****",
+    
+    "transforms.castTypes.type": "org.apache.kafka.connect.transforms.Cast$Value",
+    "transforms.castTypes.spec": "version:int64,quantity:int32",
+    
+    "transforms.insertMetadata.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.insertMetadata.static.field": "sourceSystem",
+    "transforms.insertMetadata.static.value": "trackops-orders",
+    "transforms.insertMetadata.timestamp.field": "processedAt",
+    
+    "transforms.timestampConverter.type": "org.apache.kafka.connect.transforms.TimestampConverter$Value",
+    "transforms.timestampConverter.field": "createdAt",
+    "transforms.timestampConverter.format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+    "transforms.timestampConverter.target.type": "string",
+    
     "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
     "transforms.route.regex": "trackops_orders.public.(.*)",
     "transforms.route.replacement": "orders.$1",
+    
+    "errors.tolerance": "all",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true",
+    "errors.deadletterqueue.topic.name": "trackops-orders-dlq",
+    "errors.deadletterqueue.topic.replication.factor": "1",
+    "errors.deadletterqueue.context.headers.enable": "true",
+    
     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "key.converter.schemas.enable": "false",
     "value.converter.schemas.enable": "false",
+    
     "snapshot.mode": "initial",
     "snapshot.locking.mode": "minimal",
     "max.batch.size": "2048",
