@@ -2,6 +2,7 @@ package com.trackops.server.config;
 
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
+import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.Schema;
 import org.springframework.stereotype.Service;
@@ -49,9 +50,12 @@ public class SchemaRegistryService {
                 }
             }
 
+            // Convert Avro Schema to AvroSchema (ParsedSchema)
+            AvroSchema avroSchema = new AvroSchema(schema);
+            
             // Try to get existing schema ID first
             try {
-                int existingId = schemaRegistryClient.getId(subject, schema);
+                int existingId = schemaRegistryClient.getId(subject, avroSchema);
                 log.debug("Schema already exists for subject {} with ID: {}", subject, existingId);
                 
                 // Cache the result
@@ -62,7 +66,7 @@ public class SchemaRegistryService {
             } catch (RestClientException e) {
                 if (e.getStatus() == 404) {
                     // Schema doesn't exist, register it
-                    int schemaId = schemaRegistryClient.register(subject, schema);
+                    int schemaId = schemaRegistryClient.register(subject, avroSchema);
                     log.info("Registered new schema for subject {} with ID: {}", subject, schemaId);
                     
                     // Cache the result
@@ -131,7 +135,9 @@ public class SchemaRegistryService {
      */
     public Schema getSchemaById(int schemaId) {
         try {
-            return schemaRegistryClient.getById(schemaId);
+            io.confluent.kafka.schemaregistry.ParsedSchema parsedSchema = 
+                schemaRegistryClient.getSchemaById(schemaId);
+            return (Schema) parsedSchema.rawSchema();
         } catch (RestClientException | IOException e) {
             log.error("Error retrieving schema by ID {}: {}", schemaId, e.getMessage(), e);
             throw new SchemaRegistryException("Failed to retrieve schema by ID: " + schemaId, e);

@@ -3,13 +3,13 @@ package com.trackops.server.config;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
+import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.Schema;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -106,11 +106,9 @@ public class SchemaRegistryConfig {
      */
     public static class SchemaRegistryInitializer {
         private final SchemaRegistryClient client;
-        private final boolean autoRegister;
 
         public SchemaRegistryInitializer(SchemaRegistryClient client, boolean autoRegister) {
             this.client = client;
-            this.autoRegister = autoRegister;
             
             if (autoRegister) {
                 initializeSchemas();
@@ -139,6 +137,9 @@ public class SchemaRegistryConfig {
                 String schemaContent = Files.readString(schemaPath);
                 Schema schema = new Schema.Parser().parse(schemaContent);
                 
+                // Convert Avro Schema to AvroSchema (ParsedSchema)
+                AvroSchema avroSchema = new AvroSchema(schema);
+                
                 // Extract subject name from filename (e.g., OrderCreatedEvent.avsc -> ORDER_CREATED-value)
                 String fileName = schemaPath.getFileName().toString();
                 String eventName = fileName.replace(".avsc", "");
@@ -146,12 +147,12 @@ public class SchemaRegistryConfig {
                 
                 try {
                     // Check if schema already exists
-                    int existingSchemaId = client.getId(subject, schema);
+                    int existingSchemaId = client.getId(subject, avroSchema);
                     log.debug("Schema already registered for subject {} with ID: {}", subject, existingSchemaId);
                 } catch (RestClientException e) {
                     if (e.getStatus() == 404) {
                         // Schema doesn't exist, register it
-                        int schemaId = client.register(subject, schema);
+                        int schemaId = client.register(subject, avroSchema);
                         log.info("Registered schema for subject {} with ID: {}", subject, schemaId);
                     } else {
                         log.error("Error checking/registering schema for subject {}: {}", subject, e.getMessage());
