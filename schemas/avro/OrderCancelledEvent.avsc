@@ -1,0 +1,34 @@
+{
+  "type": "record",
+  "name": "OrderCancelledEvent",
+  "namespace": "com.trackops.events.orders",
+  "fields": [
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "UUID of the order"
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "default": "ORDER_CANCELLED",
+      "doc": "Type of the event"
+    },
+    {
+      "name": "cancelledBy",
+      "type": "string",
+      "doc": "User who cancelled the order"
+    },
+    {
+      "name": "cancellationReason",
+      "type": "string",
+      "doc": "Reason for cancellation"
+    },
+    {
+      "name": "cancelledAt",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Timestamp when the order was cancelled (ISO-8601 format)"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
 package com.trackops.eventrelay.application.services;
 
+import com.trackops.eventrelay.config.AvroEventConverter;
 import com.trackops.eventrelay.domain.model.OutboxEvent;
 import com.trackops.eventrelay.ports.output.persistence.OutboxEventRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,7 +20,8 @@ import java.util.UUID;
 public class EventRelayService {
     
     private final OutboxEventRepository outboxEventRepository;
-    private final KafkaTemplate<UUID, String> kafkaTemplate;
+    private final KafkaTemplate<UUID, GenericRecord> kafkaTemplate;
+    private final AvroEventConverter avroEventConverter;
     
     @Value("${event-relay.batch-size:10}")
     private int batchSize;
@@ -30,9 +33,11 @@ public class EventRelayService {
     private long retryDelay;
     
     public EventRelayService(OutboxEventRepository outboxEventRepository, 
-                           KafkaTemplate<UUID, String> kafkaTemplate) {
+                           KafkaTemplate<UUID, GenericRecord> kafkaTemplate,
+                           AvroEventConverter avroEventConverter) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.avroEventConverter = avroEventConverter;
     }
     
     /**
@@ -98,8 +103,13 @@ public class EventRelayService {
             UUID key = UUID.fromString(event.getAggregateId());
             String payload = event.getPayload();
             
+            // Convert JSON payload to Avro GenericRecord
+            GenericRecord avroRecord = avroEventConverter.jsonToAvro(topic, payload);
+            
             // Send message to Kafka
-            kafkaTemplate.send(topic, key, payload)
+            // The Confluent Avro serializer will automatically register the schema
+            // if it doesn't exist and validate compatibility
+            kafkaTemplate.send(topic, key, avroRecord)
                 .whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         log.error("Failed to send event {} to Kafka: {}", event.getId(), throwable.getMessage());

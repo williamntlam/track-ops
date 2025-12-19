@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "OrderCreatedEvent",
+  "namespace": "com.trackops.events.orders",
+  "fields": [
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "UUID of the order"
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "default": "ORDER_CREATED",
+      "doc": "Type of the event"
+    },
+    {
+      "name": "createdBy",
+      "type": "string",
+      "doc": "User who created the order"
+    }
+  ]
+}

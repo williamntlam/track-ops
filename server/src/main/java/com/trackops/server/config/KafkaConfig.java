@@ -1,11 +1,13 @@
 package com.trackops.server.config;
 
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,11 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
-import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.listener.KafkaListenerErrorHandler;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.messaging.Message;
@@ -39,41 +37,64 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.group-id:trackops-orders}")
     private String consumerGroupId;
 
-    // Producer Configuration
+    @Value("${schema.registry.url:http://localhost:8081}")
+    private String schemaRegistryUrl;
+
+    @Value("${schema.registry.basic.auth.user.info:}")
+    private String basicAuthUserInfo;
+
+    // Producer Configuration with Avro Serializer
     @Bean
-    public ProducerFactory<UUID, String> producerFactory() {
+    public ProducerFactory<UUID, GenericRecord> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
-        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
         configProps.put(ProducerConfig.ACKS_CONFIG, "all");
         configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
         configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        
+        // Schema Registry configuration
+        configProps.put("schema.registry.url", schemaRegistryUrl);
+        if (basicAuthUserInfo != null && !basicAuthUserInfo.isEmpty()) {
+            configProps.put("basic.auth.credentials.source", "USER_INFO");
+            configProps.put("basic.auth.user.info", basicAuthUserInfo);
+        }
+        
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
     @Bean
-    public KafkaTemplate<UUID, String> kafkaTemplate() {
+    public KafkaTemplate<UUID, GenericRecord> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 
-    // Consumer Configuration
+    // Consumer Configuration with Avro Deserializer
     @Bean
-    public ConsumerFactory<UUID, String> consumerFactory() {
+    public ConsumerFactory<UUID, GenericRecord> consumerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
-        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
         configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         configProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
+        
+        // Schema Registry configuration
+        configProps.put("schema.registry.url", schemaRegistryUrl);
+        configProps.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, false); // Use GenericRecord
+        if (basicAuthUserInfo != null && !basicAuthUserInfo.isEmpty()) {
+            configProps.put("basic.auth.credentials.source", "USER_INFO");
+            configProps.put("basic.auth.user.info", basicAuthUserInfo);
+        }
+        
         return new DefaultKafkaConsumerFactory<>(configProps);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<UUID, String> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<UUID, String> factory = 
+    public ConcurrentKafkaListenerContainerFactory<UUID, GenericRecord> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, GenericRecord> factory = 
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(3); // Number of consumer threads
@@ -137,8 +158,8 @@ public class KafkaConfig {
 
     // Dead Letter Queue Configuration
     @Bean
-    public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer() {
-        return new DeadLetterPublishingRecoverer(kafkaTemplate());
+    public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaTemplate<UUID, GenericRecord> kafkaTemplate) {
+        return new DeadLetterPublishingRecoverer(kafkaTemplate);
     }
 
     @Bean

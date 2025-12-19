@@ -1,0 +1,72 @@
+{
+  "type": "record",
+  "name": "InventoryReservationFailedEvent",
+  "namespace": "com.trackops.events.inventory",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "Unique event identifier"
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "default": "INVENTORY_RESERVATION_FAILED",
+      "doc": "Type of the event"
+    },
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "UUID of the order"
+    },
+    {
+      "name": "timestamp",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Event timestamp (ISO-8601 format)"
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "doc": "Reason for reservation failure"
+    },
+    {
+      "name": "failedItems",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "FailedItem",
+          "fields": [
+            {
+              "name": "productId",
+              "type": "string",
+              "doc": "Product identifier"
+            },
+            {
+              "name": "productName",
+              "type": "string",
+              "doc": "Product name"
+            },
+            {
+              "name": "requestedQuantity",
+              "type": "int",
+              "doc": "Requested quantity"
+            },
+            {
+              "name": "availableQuantity",
+              "type": "int",
+              "doc": "Available quantity"
+            },
+            {
+              "name": "failureReason",
+              "type": "string",
+              "doc": "Reason for failure"
+            }
+          ]
+        }
+      },
+      "doc": "List of failed items"
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 package com.trackops.inventory.adapters.input.messaging;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trackops.inventory.domain.events.OrderEvent;
 import com.trackops.inventory.ports.input.events.OrderEventProcessorPort;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -16,11 +16,9 @@ import java.util.UUID;
 public class KafkaOrderEventConsumer {
 
     private final OrderEventProcessorPort orderEventProcessor;
-    private final ObjectMapper objectMapper;
 
-    public KafkaOrderEventConsumer(OrderEventProcessorPort orderEventProcessor, ObjectMapper objectMapper) {
+    public KafkaOrderEventConsumer(OrderEventProcessorPort orderEventProcessor) {
         this.orderEventProcessor = orderEventProcessor;
-        this.objectMapper = objectMapper;
     }
 
     @KafkaListener(
@@ -28,16 +26,17 @@ public class KafkaOrderEventConsumer {
         groupId = "inventory-service",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderCreated(ConsumerRecord<UUID, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderCreated(ConsumerRecord<UUID, GenericRecord> record, Acknowledgment acknowledgment) {
         try {
-            String message = record.value();
+            GenericRecord avroRecord = record.value();
             UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_CREATED event for order: {} from topic: {}", orderId, topic);
-            log.debug("Message content: {}", message);
+            log.debug("Avro record: {}", avroRecord);
 
             // Create a simple OrderEvent for processing
+            // The Avro record is validated by Schema Registry, so we can trust the data
             OrderEvent event = new OrderEvent("ORDER_CREATED", orderId) {};
             orderEventProcessor.processOrderEvent(event);
 
@@ -56,16 +55,17 @@ public class KafkaOrderEventConsumer {
         groupId = "inventory-service",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderCancelled(ConsumerRecord<UUID, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderCancelled(ConsumerRecord<UUID, GenericRecord> record, Acknowledgment acknowledgment) {
         try {
-            String message = record.value();
+            GenericRecord avroRecord = record.value();
             UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_CANCELLED event for order: {} from topic: {}", orderId, topic);
-            log.debug("Message content: {}", message);
+            log.debug("Avro record: {}", avroRecord);
 
             // Create a simple OrderEvent for processing
+            // The Avro record is validated by Schema Registry, so we can trust the data
             OrderEvent event = new OrderEvent("ORDER_CANCELLED", orderId) {};
             orderEventProcessor.processOrderEvent(event);
 

@@ -117,19 +117,48 @@ start_service "grafana" "docker/grafana.yml"
 
 print_success "All infrastructure services are running and healthy!"
 
-# Start the main application last
-print_status "Phase 2: Starting TrackOps Spring Boot application..."
+# Start microservices
+print_status "Phase 2: Starting TrackOps Microservices..."
+
+# Start Order Service
 start_service "trackops-server" "docker/trackops-server.yml"
+
+# Start Inventory Service
+print_status "Starting Inventory Service..."
+docker compose -f docker/inventory-service.yml up -d
+sleep 10
+if docker ps --filter "name=trackops-inventory-service" --format "{{.Status}}" | grep -q "healthy"; then
+    print_success "Inventory Service is healthy!"
+elif docker ps --filter "name=trackops-inventory-service" --format "{{.Status}}" | grep -q "Up"; then
+    print_warning "Inventory Service is running (health check pending)"
+else
+    print_error "Inventory Service failed to start"
+fi
+
+# Start Event Relay Service
+print_status "Starting Event Relay Service..."
+docker compose -f docker/event-relay-service.yml up -d
+sleep 10
+if docker ps --filter "name=trackops-event-relay-service" --format "{{.Status}}" | grep -q "healthy"; then
+    print_success "Event Relay Service is healthy!"
+elif docker ps --filter "name=trackops-event-relay-service" --format "{{.Status}}" | grep -q "Up"; then
+    print_warning "Event Relay Service is running (health check pending)"
+else
+    print_error "Event Relay Service failed to start"
+fi
 
 print_success "All services are running successfully!"
 print_status "======================================"
 print_status "Service URLs:"
-print_status "  TrackOps Server: http://localhost:8080"
-print_status "  Grafana:         http://localhost:3000 (admin/admin)"
-print_status "  Prometheus:      http://localhost:9090"
-print_status "  PostgreSQL:      localhost:5432"
-print_status "  Redis:           localhost:6379"
-print_status "  Kafka:           localhost:9092"
+print_status "  TrackOps Server:     http://localhost:8081"
+print_status "  Inventory Service:   http://localhost:8082"
+print_status "  Event Relay Service:  http://localhost:8084"
+print_status "  Schema Registry:     http://localhost:8081"
+print_status "  Grafana:              http://localhost:3000 (admin/admin)"
+print_status "  Prometheus:           http://localhost:9090"
+print_status "  PostgreSQL:           localhost:5432"
+print_status "  Redis:                localhost:6379"
+print_status "  Kafka:                 localhost:9092"
 print_status "======================================"
 
 # Show running containers

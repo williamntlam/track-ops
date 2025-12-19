@@ -44,7 +44,16 @@ fi
 
 # Stop all services
 print_status "Stopping all containers..."
-docker-compose down
+
+# Stop microservice containers
+print_status "Stopping microservice containers..."
+docker compose -f docker/trackops-server.yml down 2>/dev/null || true
+docker compose -f docker/inventory-service.yml down 2>/dev/null || true
+docker compose -f docker/event-relay-service.yml down 2>/dev/null || true
+
+# Stop infrastructure containers
+print_status "Stopping infrastructure containers..."
+docker-compose down 2>/dev/null || true
 
 # Optional: Remove volumes (uncomment if you want to clean data)
 # print_warning "Removing volumes (this will delete all data)..."

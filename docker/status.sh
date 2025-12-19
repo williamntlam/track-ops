@@ -48,15 +48,33 @@ echo ""
 
 # Show service health
 print_status "Service Health Check:"
-services=("postgres" "redis" "kafka" "prometheus" "grafana" "trackops-server")
+services=("postgres" "redis" "kafka" "schema-registry" "prometheus" "grafana" "trackops-server")
 
 for service in "${services[@]}"; do
-    if docker-compose ps $service | grep -q "healthy"; then
+    if docker-compose ps $service 2>/dev/null | grep -q "healthy"; then
         print_success "$service: Healthy"
-    elif docker-compose ps $service | grep -q "unhealthy"; then
+    elif docker-compose ps $service 2>/dev/null | grep -q "unhealthy"; then
         print_error "$service: Unhealthy"
-    elif docker-compose ps $service | grep -q "Up"; then
+    elif docker-compose ps $service 2>/dev/null | grep -q "Up"; then
         print_warning "$service: Running (no health check)"
+    else
+        print_error "$service: Not running"
+    fi
+done
+
+# Check microservice containers
+print_status "Microservice Containers:"
+microservices=("trackops-inventory-service" "trackops-event-relay-service")
+for service in "${microservices[@]}"; do
+    if docker ps --format "{{.Names}}" | grep -q "^${service}$"; then
+        status=$(docker ps --filter "name=${service}" --format "{{.Status}}")
+        if echo "$status" | grep -q "healthy"; then
+            print_success "$service: Healthy"
+        elif echo "$status" | grep -q "Up"; then
+            print_warning "$service: Running - $status"
+        else
+            print_error "$service: Not running"
+        fi
     else
         print_error "$service: Not running"
     fi
@@ -66,12 +84,15 @@ echo ""
 
 # Show service URLs
 print_status "Service URLs:"
-print_status "  TrackOps Server: http://localhost:8080"
-print_status "  Grafana:         http://localhost:3000 (admin/admin)"
-print_status "  Prometheus:      http://localhost:9090"
-print_status "  PostgreSQL:      localhost:5432"
-print_status "  Redis:           localhost:6379"
-print_status "  Kafka:           localhost:9092"
+print_status "  TrackOps Server:     http://localhost:8081"
+print_status "  Inventory Service:   http://localhost:8082"
+print_status "  Event Relay Service: http://localhost:8084"
+print_status "  Schema Registry:     http://localhost:8081 (Note: port conflict with Order Service if both running)"
+print_status "  Grafana:              http://localhost:3000 (admin/admin)"
+print_status "  Prometheus:           http://localhost:9090"
+print_status "  PostgreSQL:           localhost:5432"
+print_status "  Redis:                localhost:6379"
+print_status "  Kafka:                 localhost:9092"
 
 echo ""
 

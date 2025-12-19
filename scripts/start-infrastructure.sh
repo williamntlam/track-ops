@@ -14,7 +14,7 @@ fi
 
 # Start infrastructure services
 echo "📦 Starting databases and message brokers..."
-docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka debezium-connect
+docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka schema-registry debezium-connect
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be ready..."
@@ -36,6 +36,18 @@ docker compose exec redis redis-cli ping
 # Check Kafka
 echo "Checking Kafka..."
 docker compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
+
+# Check Schema Registry
+echo "Checking Schema Registry..."
+sleep 5  # Give Schema Registry time to start
+for i in {1..10}; do
+    if curl -s http://localhost:8081/subjects > /dev/null 2>&1; then
+        echo "✅ Schema Registry is ready!"
+        break
+    fi
+    echo "⏳ Attempt $i/10: Schema Registry not ready yet..."
+    sleep 3
+done
 
 # Check Debezium Connect
 echo "Checking Debezium Connect..."
@@ -59,6 +71,7 @@ echo "⚠️  NOTE: Infrastructure services are running, but microservices are N
 echo ""
 echo "🌐 Infrastructure Service URLs:"
 echo "  - Debezium Connect: http://localhost:8083"
+echo "  - Schema Registry: http://localhost:8081"
 echo "  - Kafka UI: http://localhost:8080"
 echo "  - pgAdmin: http://localhost:5050 (admin@trackops.com / admin)"
 echo ""
@@ -74,8 +87,11 @@ echo "  ./scripts/start-all-microservices.sh"
 echo ""
 echo "   Or start them individually:"
 echo "   - Order Service:     cd server && ./gradlew bootRun"
+echo "                        OR: docker compose -f docker/trackops-server.yml up -d"
 echo "   - Inventory Service: cd inventory-service && ./gradlew bootRun"
+echo "                        OR: docker compose -f docker/inventory-service.yml up -d"
 echo "   - Event Relay:       cd event-relay-service && ./gradlew bootRun"
+echo "                        OR: docker compose -f docker/event-relay-service.yml up -d"
 echo ""
 echo "🌐 Microservice URLs (after starting):"
 echo "  - Order Service:     http://localhost:8081"

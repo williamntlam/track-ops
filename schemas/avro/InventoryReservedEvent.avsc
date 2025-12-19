@@ -1,0 +1,67 @@
+{
+  "type": "record",
+  "name": "InventoryReservedEvent",
+  "namespace": "com.trackops.events.inventory",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "Unique event identifier"
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "default": "INVENTORY_RESERVED",
+      "doc": "Type of the event"
+    },
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "UUID of the order"
+    },
+    {
+      "name": "timestamp",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Event timestamp (ISO-8601 format)"
+    },
+    {
+      "name": "reservationId",
+      "type": "string",
+      "doc": "Unique reservation identifier"
+    },
+    {
+      "name": "reservedItems",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "ReservedItem",
+          "fields": [
+            {
+              "name": "productId",
+              "type": "string",
+              "doc": "Product identifier"
+            },
+            {
+              "name": "productName",
+              "type": "string",
+              "doc": "Product name"
+            },
+            {
+              "name": "quantity",
+              "type": "int",
+              "doc": "Reserved quantity"
+            },
+            {
+              "name": "unitPrice",
+              "type": "string",
+              "doc": "Unit price as string"
+            }
+          ]
+        }
+      },
+      "doc": "List of reserved items"
+    }
+  ]
+}

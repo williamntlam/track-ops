@@ -1,0 +1,24 @@
+{
+  "type": "record",
+  "name": "OrderDeliveredEvent",
+  "namespace": "com.trackops.events.orders",
+  "fields": [
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "UUID of the order"
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "default": "ORDER_DELIVERED",
+      "doc": "Type of the event"
+    },
+    {
+      "name": "deliveredAt",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Timestamp when the order was delivered (ISO-8601 format)"
+    }
+  ]
+}

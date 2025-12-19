@@ -93,6 +93,15 @@ stop_service_by_port() {
 # Stop microservices
 print_status "Phase 1: Stopping Microservices..."
 
+# Check if services are running in Docker
+if docker ps --format "{{.Names}}" | grep -q "trackops-inventory-service\|trackops-event-relay-service\|trackops-server"; then
+    print_status "Stopping Docker containers..."
+    docker compose -f docker/trackops-server.yml down 2>/dev/null || true
+    docker compose -f docker/inventory-service.yml down 2>/dev/null || true
+    docker compose -f docker/event-relay-service.yml down 2>/dev/null || true
+    print_success "Docker containers stopped"
+fi
+
 # Stop Order Service (port 8081)
 stop_service_by_class "Order Service" "ServerApplication" "8081"
 

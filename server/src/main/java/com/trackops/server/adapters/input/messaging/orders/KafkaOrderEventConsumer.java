@@ -1,11 +1,12 @@
 package com.trackops.server.adapters.input.messaging.orders;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trackops.server.config.AvroEventConverter;
 import com.trackops.server.ports.input.events.OrderEventProcessorPort;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
 import com.trackops.server.domain.events.orders.OrderCreatedEvent;
@@ -15,8 +16,6 @@ import com.trackops.server.domain.events.orders.OrderCancelledEvent;
 import com.trackops.server.domain.events.orders.InventoryReservedEvent;
 import com.trackops.server.domain.events.orders.InventoryReservationFailedEvent;
 import com.trackops.server.domain.events.orders.InventoryReleasedEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 
 import java.util.UUID;
 
@@ -25,11 +24,11 @@ import java.util.UUID;
 public class KafkaOrderEventConsumer {
 
     private final OrderEventProcessorPort orderEventProcessor;
-    private final ObjectMapper objectMapper;
+    private final AvroEventConverter avroEventConverter;
 
-    public KafkaOrderEventConsumer(OrderEventProcessorPort orderEventProcessor, ObjectMapper objectMapper) {
+    public KafkaOrderEventConsumer(OrderEventProcessorPort orderEventProcessor, AvroEventConverter avroEventConverter) {
         this.orderEventProcessor = orderEventProcessor;
-        this.objectMapper = objectMapper;
+        this.avroEventConverter = avroEventConverter;
     }
 
     // Your @KafkaListener methods will go here
@@ -40,25 +39,22 @@ public class KafkaOrderEventConsumer {
         groupId = "trackops-orders",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderCreated(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderCreated(ConsumerRecord<UUID, GenericRecord> record, Acknowledgment acknowledgment) {
 
         try {
-            String message = record.value();
-            UUID orderId = UUID.fromString(record.key());
+            GenericRecord avroRecord = record.value();
+            UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_CREATED event for order: {} from topic: {}", orderId, topic);
-            log.debug("Message content: {}", message);
+            log.debug("Avro record: {}", avroRecord);
 
-            OrderCreatedEvent event = objectMapper.readValue(message, OrderCreatedEvent.class);
+            OrderCreatedEvent event = avroEventConverter.fromAvro(avroRecord);
             orderEventProcessor.processOrderEvent(event);
 
             log.info("Successfully processed ORDER_CREATED event for order: {}", orderId);
             acknowledgment.acknowledge();
 
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize ORDER_CREATED event for order: {} - Invalid JSON format", record.key(), e);
-            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_CREATED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message
@@ -72,24 +68,21 @@ public class KafkaOrderEventConsumer {
         groupId = "trackops-orders",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderStatusUpdated(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderStatusUpdated(ConsumerRecord<UUID, GenericRecord> record, Acknowledgment acknowledgment) {
         try {
-            String message = record.value();
-            UUID orderId = UUID.fromString(record.key());
+            GenericRecord avroRecord = record.value();
+            UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_STATUS_UPDATED event for order: {} from topic: {}", orderId, topic);
-            log.debug("Message content: {}", message);
+            log.debug("Avro record: {}", avroRecord);
             
-            OrderStatusUpdatedEvent event = objectMapper.readValue(message, OrderStatusUpdatedEvent.class);
+            OrderStatusUpdatedEvent event = avroEventConverter.fromAvroStatusUpdated(avroRecord);
             orderEventProcessor.processOrderEvent(event);
 
             log.info("Successfully processed ORDER_STATUS_UPDATED event for order: {}", orderId);
             acknowledgment.acknowledge();
             
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize ORDER_STATUS_UPDATED event for order: {} - Invalid JSON format", record.key(), e);
-            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_STATUS_UPDATED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message
@@ -102,25 +95,22 @@ public class KafkaOrderEventConsumer {
         groupId = "trackops-orders",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderDelivered(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderDelivered(ConsumerRecord<UUID, GenericRecord> record, Acknowledgment acknowledgment) {
         
         try {
-            String message = record.value();
-            UUID orderId = UUID.fromString(record.key());
+            GenericRecord avroRecord = record.value();
+            UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_DELIVERED event for order: {} from topic: {}", orderId, topic);
-            log.debug("Message content: {}", message);
+            log.debug("Avro record: {}", avroRecord);
             
-            OrderDeliveredEvent event = objectMapper.readValue(message, OrderDeliveredEvent.class);
+            OrderDeliveredEvent event = avroEventConverter.fromAvroDelivered(avroRecord);
             orderEventProcessor.processOrderEvent(event);
 
             log.info("Successfully processed ORDER_DELIVERED event for order: {}", orderId);
             acknowledgment.acknowledge();
             
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize ORDER_DELIVERED event for order: {} - Invalid JSON format", record.key(), e);
-            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_DELIVERED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message
@@ -133,25 +123,22 @@ public class KafkaOrderEventConsumer {
         groupId = "trackops-orders",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    public void handleOrderCancelled(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void handleOrderCancelled(ConsumerRecord<UUID, GenericRecord> record, Acknowledgment acknowledgment) {
         
         try {
-            String message = record.value();
-            UUID orderId = UUID.fromString(record.key());
+            GenericRecord avroRecord = record.value();
+            UUID orderId = record.key();
             String topic = record.topic();
             
             log.info("Received ORDER_CANCELLED event for order: {} from topic: {}", orderId, topic);
-            log.debug("Message content: {}", message);
+            log.debug("Avro record: {}", avroRecord);
             
-            OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
+            OrderCancelledEvent event = avroEventConverter.fromAvroCancelled(avroRecord);
             orderEventProcessor.processOrderEvent(event);
             
             log.info("Successfully processed ORDER_CANCELLED event for order: {}", orderId);
             acknowledgment.acknowledge();
             
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize ORDER_CANCELLED event for order: {} - Invalid JSON format", record.key(), e);
-            acknowledgment.acknowledge(); // Acknowledge malformed messages to avoid infinite retry
         } catch (Exception e) {
             log.error("Failed to process ORDER_CANCELLED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message

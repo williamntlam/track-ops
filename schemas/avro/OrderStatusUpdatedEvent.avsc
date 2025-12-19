@@ -1,0 +1,34 @@
+{
+  "type": "record",
+  "name": "OrderStatusUpdatedEvent",
+  "namespace": "com.trackops.events.orders",
+  "fields": [
+    {
+      "name": "orderId",
+      "type": "string",
+      "doc": "UUID of the order"
+    },
+    {
+      "name": "eventType",
+      "type": "string",
+      "default": "ORDER_STATUS_UPDATED",
+      "doc": "Type of the event"
+    },
+    {
+      "name": "previousStatus",
+      "type": "string",
+      "doc": "Previous status of the order"
+    },
+    {
+      "name": "newStatus",
+      "type": "string",
+      "doc": "New status of the order"
+    },
+    {
+      "name": "expectedVersion",
+      "type": ["null", "long"],
+      "default": null,
+      "doc": "Expected version for optimistic locking"
+    }
+  ]
+}

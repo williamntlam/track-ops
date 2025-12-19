@@ -1,12 +1,12 @@
 package com.trackops.inventory.adapters.output.messaging;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trackops.inventory.config.AvroEventConverter;
 import com.trackops.inventory.domain.events.InventoryReservedEvent;
 import com.trackops.inventory.domain.events.InventoryReservationFailedEvent;
 import com.trackops.inventory.domain.events.InventoryReleasedEvent;
 import com.trackops.inventory.ports.output.events.InventoryEventProducer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.generic.GenericRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -16,12 +16,14 @@ import java.util.UUID;
 @Service
 public class KafkaInventoryEventProducer implements InventoryEventProducer {
 
-    private final KafkaTemplate<UUID, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<UUID, GenericRecord> kafkaTemplate;
+    private final AvroEventConverter avroEventConverter;
 
-    public KafkaInventoryEventProducer(KafkaTemplate<UUID, String> kafkaTemplate, ObjectMapper objectMapper) {
+    public KafkaInventoryEventProducer(
+            KafkaTemplate<UUID, GenericRecord> kafkaTemplate,
+            AvroEventConverter avroEventConverter) {
         this.kafkaTemplate = kafkaTemplate;
-        this.objectMapper = objectMapper;
+        this.avroEventConverter = avroEventConverter;
     }
 
     @Override
@@ -43,15 +45,29 @@ public class KafkaInventoryEventProducer implements InventoryEventProducer {
         try {
             String topic = getTopicForEvent(event);
             UUID key = getOrderIdFromEvent(event);
-            String value = objectMapper.writeValueAsString(event);
+            
+            // Convert event to Avro GenericRecord
+            GenericRecord avroRecord = convertToAvro(event);
+            
+            // The Confluent Avro serializer will automatically register the schema
+            // if it doesn't exist and validate compatibility
+            kafkaTemplate.send(topic, key, avroRecord);
+            log.debug("Successfully published Avro event {} for order {}", topic, key);
 
-            kafkaTemplate.send(topic, key, value);
-            log.debug("Successfully published event {} for order {}", topic, key);
-
-        } catch (JsonProcessingException err) {
-            log.error("Failed to serialize event: {}", err.getMessage(), err);
         } catch (Exception err) {
             log.error("Failed to publish event: {}", err.getMessage(), err);
+        }
+    }
+
+    private GenericRecord convertToAvro(Object event) {
+        if (event instanceof InventoryReservedEvent) {
+            return avroEventConverter.toAvro((InventoryReservedEvent) event);
+        } else if (event instanceof InventoryReservationFailedEvent) {
+            return avroEventConverter.toAvro((InventoryReservationFailedEvent) event);
+        } else if (event instanceof InventoryReleasedEvent) {
+            return avroEventConverter.toAvro((InventoryReleasedEvent) event);
+        } else {
+            throw new IllegalArgumentException("Unknown event type: " + event.getClass().getSimpleName());
         }
     }
 

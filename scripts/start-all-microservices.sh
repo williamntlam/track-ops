@@ -124,43 +124,72 @@ fi
 # Step 4: Start Microservices
 print_status "Phase 4: Starting Microservices..."
 
-# Function to start a service in background
-start_service_background() {
-    local service_name=$1
-    local service_dir=$2
-    local profile=$3
+# Check if USE_DOCKER environment variable is set
+USE_DOCKER=${USE_DOCKER:-false}
+
+if [ "$USE_DOCKER" = "true" ]; then
+    print_status "Starting microservices via Docker Compose..."
     
-    print_status "Starting $service_name in background..."
+    # Function to start a service via Docker Compose
+    start_service_docker() {
+        local service_name=$1
+        local compose_file=$2
+        
+        print_status "Starting $service_name via Docker..."
+        docker compose -f "$compose_file" up -d
+        
+        if [ $? -eq 0 ]; then
+            print_success "$service_name container started"
+        else
+            print_error "$service_name failed to start"
+            return 1
+        fi
+    }
+    
+    # Start services via Docker Compose
+    start_service_docker "Order Service" "docker/trackops-server.yml"
+    start_service_docker "Inventory Service" "docker/inventory-service.yml"
+    start_service_docker "Event Relay Service" "docker/event-relay-service.yml"
+    
+else
+    # Function to start a service in background (Gradle)
+    start_service_background() {
+        local service_name=$1
+        local service_dir=$2
+        local profile=$3
+        
+        print_status "Starting $service_name in background..."
+        
+        # Create logs directory
+        mkdir -p logs
+        
+        # Start service in background
+        cd "$service_dir"
+        nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
+        local pid=$!
+        echo $pid > "../logs/${service_name}.pid"
+        
+        cd ..
+        
+        # Wait a moment for startup
+        sleep 5
+        # Check if process is still running
+        if kill -0 $pid 2>/dev/null; then
+            print_success "$service_name started successfully (PID: $pid)"
+        else
+            print_error "$service_name failed to start"
+            return 1
+        fi
+    }
     
     # Create logs directory
     mkdir -p logs
     
-    # Start service in background
-    cd "$service_dir"
-    nohup ./gradlew bootRun --args="--spring.profiles.active=$profile" > "../logs/${service_name}.log" 2>&1 &
-    local pid=$!
-    echo $pid > "../logs/${service_name}.pid"
-    
-    cd ..
-    
-    # Wait a moment for startup
-    sleep 5
-    # Check if process is still running
-    if kill -0 $pid 2>/dev/null; then
-        print_success "$service_name started successfully (PID: $pid)"
-    else
-        print_error "$service_name failed to start"
-        return 1
-    fi
-}
-
-# Create logs directory
-mkdir -p logs
-
-# Start services in background
-start_service_background "Order Service" "server" "default"
-start_service_background "Inventory Service" "inventory-service" "default"
-start_service_background "Event Relay Service" "event-relay-service" "default"
+    # Start services in background
+    start_service_background "Order Service" "server" "default"
+    start_service_background "Inventory Service" "inventory-service" "default"
+    start_service_background "Event Relay Service" "event-relay-service" "default"
+fi
 
 # Function to wait for service health with retries
 wait_for_service_health() {
@@ -237,6 +266,16 @@ echo "  tail -f logs/Inventory\\ Service.log"
 echo "  tail -f logs/Event\\ Relay\\ Service.log"
 echo ""
 echo "💡 Tips:"
-echo "  - All services run in background processes"
-echo "  - Logs are saved to ./logs/ directory"
+if [ "$USE_DOCKER" = "true" ]; then
+    echo "  - All services run in Docker containers"
+    echo "  - View logs: docker logs trackops-server"
+    echo "  - View logs: docker logs trackops-inventory-service"
+    echo "  - View logs: docker logs trackops-event-relay-service"
+else
+    echo "  - All services run in background processes"
+    echo "  - Logs are saved to ./logs/ directory"
+fi
 echo "  - Use ./scripts/stop-all-microservices.sh to stop everything"
+echo ""
+echo "🐳 To start services via Docker instead of Gradle:"
+echo "  USE_DOCKER=true ./scripts/start-all-microservices.sh"
