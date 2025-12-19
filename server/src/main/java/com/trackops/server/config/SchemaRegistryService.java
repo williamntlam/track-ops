@@ -98,9 +98,14 @@ public class SchemaRegistryService {
                 return localSchemaCache.get(cacheKey);
             }
 
-            Schema schema = version != null 
-                ? schemaRegistryClient.getBySubjectAndId(subject, version)
-                : schemaRegistryClient.getLatestSchemaMetadata(subject).getSchema();
+            Schema schema;
+            if (version != null) {
+                String schemaString = schemaRegistryClient.getSchemaMetadata(subject, version).getSchema();
+                schema = new Schema.Parser().parse(schemaString);
+            } else {
+                String schemaString = schemaRegistryClient.getLatestSchemaMetadata(subject).getSchema();
+                schema = new Schema.Parser().parse(schemaString);
+            }
 
             // Cache the result
             localSchemaCache.put(cacheKey, schema);
