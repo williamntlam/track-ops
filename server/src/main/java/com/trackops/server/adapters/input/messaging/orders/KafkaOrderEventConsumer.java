@@ -1,5 +1,7 @@
 package com.trackops.server.adapters.input.messaging.orders;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trackops.server.config.AvroEventConverter;
 import com.trackops.server.ports.input.events.OrderEventProcessorPort;
 import lombok.extern.slf4j.Slf4j;
@@ -25,10 +27,12 @@ public class KafkaOrderEventConsumer {
 
     private final OrderEventProcessorPort orderEventProcessor;
     private final AvroEventConverter avroEventConverter;
+    private final ObjectMapper objectMapper;
 
-    public KafkaOrderEventConsumer(OrderEventProcessorPort orderEventProcessor, AvroEventConverter avroEventConverter) {
+    public KafkaOrderEventConsumer(OrderEventProcessorPort orderEventProcessor, AvroEventConverter avroEventConverter, ObjectMapper objectMapper) {
         this.orderEventProcessor = orderEventProcessor;
         this.avroEventConverter = avroEventConverter;
+        this.objectMapper = objectMapper;
     }
 
     // Your @KafkaListener methods will go here
