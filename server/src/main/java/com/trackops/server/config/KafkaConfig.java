@@ -8,6 +8,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,6 +69,37 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<UUID, GenericRecord> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
+    }
+
+    // Producer Factory for Outbox Event Publisher (UUID key, String value)
+    @Bean
+    public ProducerFactory<UUID, String> outboxProducerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<UUID, String> outboxKafkaTemplate() {
+        return new KafkaTemplate<>(outboxProducerFactory());
+    }
+
+    // KafkaAdmin for topic management - uses localhost for local development
+    @Bean
+    public KafkaAdmin kafkaAdmin() {
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        // Configure client to handle advertised listener issues
+        configs.put(org.apache.kafka.clients.CommonClientConfigs.METADATA_MAX_AGE_CONFIG, 30000);
+        configs.put(org.apache.kafka.clients.CommonClientConfigs.RECONNECT_BACKOFF_MS_CONFIG, 50);
+        configs.put(org.apache.kafka.clients.CommonClientConfigs.RETRY_BACKOFF_MS_CONFIG, 100);
+        return new KafkaAdmin(configs);
     }
 
     // Consumer Configuration with Avro Deserializer

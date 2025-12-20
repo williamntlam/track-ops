@@ -102,13 +102,13 @@ if docker ps --format "{{.Names}}" | grep -q "trackops-inventory-service\|tracko
     print_success "Docker containers stopped"
 fi
 
-# Stop Order Service (port 8081)
+# Stop Order Service (port 8081) - if running locally via Gradle
 stop_service_by_class "Order Service" "ServerApplication" "8081"
 
-# Stop Inventory Service (port 8082) 
+# Stop Inventory Service (port 8082) - if running locally via Gradle
 stop_service_by_class "Inventory Service" "InventoryServiceApplication" "8082"
 
-# Stop Event Relay Service (port 8084)
+# Stop Event Relay Service (port 8084) - if running locally via Gradle
 stop_service_by_class "Event Relay Service" "EventRelayServiceApplication" "8084"
 
 # Additional cleanup for any remaining gradlew processes
@@ -117,7 +117,24 @@ pkill -f "gradlew.*bootRun" 2>/dev/null || true
 
 # Stop infrastructure
 print_status "Phase 2: Stopping Infrastructure Services..."
-docker compose down
+
+# Stop Debezium Connect first (depends on Kafka)
+print_status "Stopping Debezium Connect..."
+docker compose -f docker/debezium-connect.yml down 2>/dev/null || true
+
+# Stop Kafka and Schema Registry
+print_status "Stopping Kafka and Schema Registry..."
+docker compose -f docker/kafka.yml down 2>/dev/null || true
+
+# Stop Redis
+print_status "Stopping Redis..."
+docker compose -f docker/redis.yml down 2>/dev/null || true
+
+# Stop PostgreSQL services
+print_status "Stopping PostgreSQL services..."
+docker compose -f docker/postgres.yml down 2>/dev/null || true
+
+print_success "Infrastructure services stopped"
 
 print_success "🎉 All services stopped successfully!"
 echo ""
@@ -125,7 +142,10 @@ echo "📊 Cleanup Summary:"
 echo "  - Order Service (port 8081) stopped"
 echo "  - Inventory Service (port 8082) stopped" 
 echo "  - Event Relay Service (port 8084) stopped"
-echo "  - Infrastructure services stopped"
+echo "  - Debezium Connect (port 8083) stopped"
+echo "  - Kafka and Schema Registry (port 8085) stopped"
+echo "  - Redis (port 6379) stopped"
+echo "  - PostgreSQL services stopped"
 echo "  - Docker volumes preserved"
 echo "  - Database data preserved"
 echo ""
@@ -135,4 +155,5 @@ echo ""
 echo "💡 Note:"
 echo "  - Services run in background in single terminal"
 echo "  - All ports are properly released"
-echo "  - Use 'docker ps' to verify infrastructure is stopped"
+echo "  - Use 'docker ps' to verify all services are stopped"
+echo "  - Use 'USE_DOCKER=true ./scripts/start-all-microservices.sh' for Docker mode"

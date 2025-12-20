@@ -1,11 +1,13 @@
 package com.trackops.server.config;
 
 import io.github.bucket4j.distributed.proxy.ProxyManager;
-import io.github.bucket4j.redis.lettuce.LettuceBasedProxyManager;
+import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.codec.StringByteArrayCodec;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import java.nio.ByteBuffer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,7 +59,32 @@ public class RateLimitConfig {
      */
     @Bean(destroyMethod = "close")
     public StatefulRedisConnection<String, byte[]> rateLimitRedisConnection(RedisClient redisClient) {
-        return redisClient.connect(new StringByteArrayCodec());
+        RedisCodec<String, byte[]> codec = new RedisCodec<String, byte[]>() {
+            private final StringCodec stringCodec = StringCodec.UTF8;
+            
+            @Override
+            public String decodeKey(ByteBuffer bytes) {
+                return stringCodec.decodeKey(bytes);
+            }
+            
+            @Override
+            public byte[] decodeValue(ByteBuffer bytes) {
+                byte[] result = new byte[bytes.remaining()];
+                bytes.get(result);
+                return result;
+            }
+            
+            @Override
+            public ByteBuffer encodeKey(String key) {
+                return stringCodec.encodeKey(key);
+            }
+            
+            @Override
+            public ByteBuffer encodeValue(byte[] value) {
+                return ByteBuffer.wrap(value);
+            }
+        };
+        return redisClient.connect(codec);
     }
 
     /**

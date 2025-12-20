@@ -3,11 +3,6 @@ services:
   debezium-connect:
     image: debezium/connect:2.5
     container_name: trackops-debezium-connect
-    depends_on:
-      kafka:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
     environment:
       BOOTSTRAP_SERVERS: trackops-kafka:9092
       GROUP_ID: 1

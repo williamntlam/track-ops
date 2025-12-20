@@ -48,15 +48,15 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: trackops-kafka:9092
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8085
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
       SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 1
       # Compatibility level: BACKWARD (default) - new schemas must be backward compatible
       SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: BACKWARD
     ports:
-      - "8081:8081"
+      - "8085:8085"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      test: ["CMD", "curl", "-f", "http://localhost:8085/subjects"]
       interval: 15s
       timeout: 10s
       retries: 10

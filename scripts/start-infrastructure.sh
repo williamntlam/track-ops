@@ -56,7 +56,7 @@ docker exec trackops-kafka kafka-broker-api-versions --bootstrap-server localhos
 echo "Checking Schema Registry..."
 sleep 5  # Give Schema Registry time to start
 for i in {1..10}; do
-    if curl -s http://localhost:8081/subjects > /dev/null 2>&1; then
+    if curl -s http://localhost:8085/subjects > /dev/null 2>&1; then
         echo "✅ Schema Registry is ready!"
         break
     fi
@@ -77,7 +77,7 @@ echo "⚠️  NOTE: Infrastructure services are running, but microservices are N
 echo ""
 echo "🌐 Infrastructure Service URLs:"
 echo "  - Debezium Connect: http://localhost:8083"
-echo "  - Schema Registry: http://localhost:8081"
+echo "  - Schema Registry: http://localhost:8085"
 echo "  - Kafka UI: http://localhost:8080"
 echo "  - pgAdmin: http://localhost:5050 (admin@trackops.com / admin)"
 echo ""

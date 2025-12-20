@@ -2,7 +2,7 @@ services:
   # TrackOps Spring Boot Application
   trackops-server:
     build:
-      context: ./server
+      context: ../server
       dockerfile: Dockerfile
     container_name: trackops-server
     ports:
@@ -15,6 +15,7 @@ services:
       SPRING_REDIS_HOST: trackops-redis
       SPRING_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:9092
+      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8085
     networks:
       - trackops-network
     restart: unless-stopped

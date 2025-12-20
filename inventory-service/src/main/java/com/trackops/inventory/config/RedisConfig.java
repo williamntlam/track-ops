@@ -1,4 +1,4 @@
-package com.trackops.server.config;
+package com.trackops.inventory.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +18,7 @@ public class RedisConfig {
     @Value("${spring.redis.port:6379}")
     private int redisPort;
 
-    @Value("${spring.redis.database:0}")
+    @Value("${spring.redis.database:1}")
     private int redisDatabase;
 
     /**
@@ -46,8 +46,8 @@ public class RedisConfig {
         StringRedisSerializer stringSerializer = StringRedisSerializer.UTF_8;
 
         template.setKeySerializer(stringSerializer);
-        template.setValueSerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
+        template.setValueSerializer(stringSerializer);
         template.setHashValueSerializer(stringSerializer);
 
         template.afterPropertiesSet();

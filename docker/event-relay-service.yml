@@ -10,7 +10,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: password
       SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:9092
-      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8081
+      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8085
     ports:
       - "${EVENT_RELAY_SERVICE_PORT:-8084}:8084"
     healthcheck:

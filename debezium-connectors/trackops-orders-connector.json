@@ -20,6 +20,7 @@
     "transforms.extractNewRecordState.delete.tombstone.handling.mode": "none",
     "transforms.extractNewRecordState.drop.tombstones": "false",
     "transforms.extractNewRecordState.add.fields": "op,source.ts_ms,source.db,source.table",
+    "transforms.extractNewRecordState.add.source.fields": "db,table,op,ts_ms",
     
     "transforms.renameFields.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
     "transforms.renameFields.renames": "customer_id:customerId,total_amount:totalAmount,postal_code:postalCode,delivery_instructions:deliveryInstructions,created_at:createdAt,updated_at:updatedAt,order_id:orderId,product_id:productId,product_name:productName,unit_price:unitPrice,total_price:totalPrice,phone_number:phoneNumber,street_address:streetAddress",
