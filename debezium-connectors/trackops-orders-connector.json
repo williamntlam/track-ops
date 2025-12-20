@@ -2,7 +2,7 @@
   "name": "trackops-orders-connector",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "database.hostname": "postgres-server",
+    "database.hostname": "trackops-postgres-server",
     "database.port": "5432",
     "database.user": "postgres",
     "database.password": "password",

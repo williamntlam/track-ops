@@ -12,9 +12,24 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+# Create network if it doesn't exist
+echo "🌐 Ensuring Docker network exists..."
+docker network create trackops-network 2>/dev/null || echo "Network already exists"
+
 # Start infrastructure services
 echo "📦 Starting databases and message brokers..."
-docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka schema-registry debezium-connect
+
+# Start PostgreSQL services
+echo "Starting PostgreSQL services..."
+docker compose -f docker/postgres.yml up -d
+
+# Start Redis
+echo "Starting Redis..."
+docker compose -f docker/redis.yml up -d
+
+# Start Kafka and Schema Registry
+echo "Starting Kafka and Schema Registry..."
+docker compose -f docker/kafka.yml up -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be ready..."
@@ -25,17 +40,17 @@ echo "🔍 Checking service health..."
 
 # Check PostgreSQL services
 echo "Checking PostgreSQL services..."
-docker compose exec postgres-server pg_isready -U postgres -d trackops_orders
-docker compose exec postgres-inventory pg_isready -U postgres -d trackops_inventory
-docker compose exec postgres-event-relay pg_isready -U postgres -d trackops_event_relay
+docker exec trackops-postgres-server pg_isready -U postgres -d trackops_orders || echo "⚠️  postgres-server not ready"
+docker exec trackops-postgres-inventory pg_isready -U postgres -d trackops_inventory || echo "⚠️  postgres-inventory not ready"
+docker exec trackops-postgres-event-relay pg_isready -U postgres -d trackops_event_relay || echo "⚠️  postgres-event-relay not ready"
 
 # Check Redis
 echo "Checking Redis..."
-docker compose exec redis redis-cli ping
+docker exec trackops-redis redis-cli ping || echo "⚠️  redis not ready"
 
 # Check Kafka
 echo "Checking Kafka..."
-docker compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
+docker exec trackops-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 || echo "⚠️  kafka not ready"
 
 # Check Schema Registry
 echo "Checking Schema Registry..."
@@ -49,17 +64,8 @@ for i in {1..10}; do
     sleep 3
 done
 
-# Check Debezium Connect
-echo "Checking Debezium Connect..."
-sleep 10  # Give Debezium Connect time to start
-for i in {1..10}; do
-    if curl -s http://localhost:8083/connectors > /dev/null 2>&1; then
-        echo "✅ Debezium Connect is ready!"
-        break
-    fi
-    echo "⏳ Attempt $i/10: Debezium Connect not ready yet..."
-    sleep 3
-done
+# Note: Debezium Connect will be started by start-all-microservices.sh after Kafka is healthy
+echo "ℹ️  Debezium Connect will be started by the main startup script after Kafka is confirmed healthy"
 
 # Initialize databases
 echo "🗄️ Initializing databases..."

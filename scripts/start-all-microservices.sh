@@ -83,14 +83,14 @@ ensure_kafka_healthy() {
 
 reset_kafka_cluster() {
     print_status "Stopping Kafka to reset data..."
-    docker compose stop kafka >/dev/null 2>&1 || true
-    docker compose rm -f -s kafka >/dev/null 2>&1 || true
+    docker compose -f docker/kafka.yml stop kafka >/dev/null 2>&1 || true
+    docker compose -f docker/kafka.yml rm -f -s kafka >/dev/null 2>&1 || true
 
     print_status "Removing Kafka data volume..."
     docker volume rm track-ops_kafka_data >/dev/null 2>&1 || true
 
     print_status "Starting Kafka fresh (KRaft mode)..."
-    docker compose up -d kafka
+    docker compose -f docker/kafka.yml up -d kafka
 
     # Wait briefly for Kafka to initialize
     sleep 5
@@ -99,7 +99,9 @@ reset_kafka_cluster() {
 # Ensure Kafka is healthy (and self-heal if needed) before starting Debezium Connect
 ensure_kafka_healthy
 
-docker compose up -d debezium-connect
+# Start Debezium Connect
+print_status "Starting Debezium Connect..."
+docker compose -f docker/debezium-connect.yml up -d
 
 # Wait for Debezium Connect to be ready
 print_status "Waiting for Debezium Connect to be ready..."

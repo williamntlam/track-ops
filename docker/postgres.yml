@@ -1,24 +1,75 @@
-version: '3.8'
-
 services:
-  # PostgreSQL Database
-  postgres:
+  # PostgreSQL Database for Order Service
+  postgres-server:
     image: postgres:15
-    container_name: trackops-postgres
+    container_name: trackops-postgres-server
     environment:
-      POSTGRES_DB: trackops
+      POSTGRES_DB: trackops_orders
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_server_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trackops_orders"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - trackops-network
+    restart: unless-stopped
+
+  # PostgreSQL Database for Inventory Service
+  postgres-inventory:
+    image: postgres:15
+    container_name: trackops-postgres-inventory
+    environment:
+      POSTGRES_DB: trackops_inventory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_inventory_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trackops_inventory"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trackops-network
+    restart: unless-stopped
+
+  # PostgreSQL Database for Event Relay Service
+  postgres-event-relay:
+    image: postgres:15
+    container_name: trackops-postgres-event-relay
+    environment:
+      POSTGRES_DB: trackops_event_relay
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_event_relay_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trackops_event_relay"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trackops-network
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_server_data:
+  postgres_inventory_data:
+  postgres_event_relay_data:
+
+networks:
+  trackops-network:
+    external: true

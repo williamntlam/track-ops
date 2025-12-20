@@ -9,10 +9,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://trackops-postgres-inventory:5432/trackops_inventory
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: password
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:29092
-      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:9092
+      SPRING_REDIS_HOST: trackops-redis
       SPRING_REDIS_PORT: 6379
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8081
     ports:
       - "8082:8082"
     healthcheck:

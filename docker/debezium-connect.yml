@@ -1,0 +1,36 @@
+services:
+  # Debezium Connect
+  debezium-connect:
+    image: debezium/connect:2.5
+    container_name: trackops-debezium-connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: trackops-kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      # PostgreSQL JDBC Driver
+      CONNECT_PLUGIN_PATH: /kafka/connect
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - trackops-network
+    restart: unless-stopped
+
+networks:
+  trackops-network:
+    external: true
