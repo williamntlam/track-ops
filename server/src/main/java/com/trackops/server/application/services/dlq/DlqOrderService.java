@@ -84,6 +84,11 @@ public class DlqOrderService {
         return dlqOrderRepository.countByStatus(status);
     }
 
+    /** Total rows in dlq_orders (used for consumer throttling). */
+    public long countTotal() {
+        return dlqOrderRepository.count();
+    }
+
     /**
      * Whether this topic should be persisted to dlq_orders (order events only).
      */

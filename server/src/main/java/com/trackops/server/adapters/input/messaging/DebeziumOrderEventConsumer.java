@@ -39,6 +39,7 @@ public class DebeziumOrderEventConsumer {
      * Consume Debezium events from the orders table
      */
     @KafkaListener(
+        id = "debezium-order-event-consumer",
         topics = "trackops_orders.public.orders",
         groupId = "debezium-order-consumer",
         containerFactory = "kafkaListenerContainerFactory",

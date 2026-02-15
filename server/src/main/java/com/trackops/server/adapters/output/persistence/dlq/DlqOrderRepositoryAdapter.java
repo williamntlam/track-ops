@@ -52,4 +52,9 @@ public class DlqOrderRepositoryAdapter implements DlqOrderRepository {
     public long countPending() {
         return jpaRepository.countPending();
     }
+
+    @Override
+    public long count() {
+        return jpaRepository.count();
+    }
 }

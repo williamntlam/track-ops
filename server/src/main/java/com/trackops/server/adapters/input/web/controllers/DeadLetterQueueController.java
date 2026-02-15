@@ -1,5 +1,6 @@
 package com.trackops.server.adapters.input.web.controllers;
 
+import com.trackops.server.adapters.output.messaging.DlqThrottleMonitor;
 import com.trackops.server.application.services.dlq.DlqOrderService;
 import com.trackops.server.domain.model.dlq.DlqOrder;
 import lombok.RequiredArgsConstructor;
@@ -7,8 +8,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -22,19 +25,24 @@ import java.util.UUID;
 public class DeadLetterQueueController {
 
     private final DlqOrderService dlqOrderService;
+    private final Optional<DlqThrottleMonitor> throttleMonitor;
 
     /**
-     * Get DLQ metrics from PostgreSQL dlq_orders.
+     * Get DLQ metrics from PostgreSQL dlq_orders. Includes throttle status when throttling is enabled.
      */
     @GetMapping("/metrics")
     public ResponseEntity<Map<String, Object>> getDLQMetrics() {
         long pendingCount = dlqOrderService.countPending();
+        long totalCount = dlqOrderService.countTotal();
 
-        Map<String, Object> response = Map.of(
+        Map<String, Object> response = new HashMap<>(Map.of(
                 "pendingDlqCount", pendingCount,
-                "totalDlqCount", pendingCount,
-                "status", pendingCount > 0 ? "ALERT" : "HEALTHY"
-        );
+                "totalDlqCount", totalCount,
+                "status", totalCount > 0 ? "ALERT" : "HEALTHY"
+        ));
+        throttleMonitor.ifPresent(m -> {
+            response.put("consumerPausedByThrottle", m.isConsumerPausedByThrottle());
+        });
 
         return ResponseEntity.ok(response);
     }

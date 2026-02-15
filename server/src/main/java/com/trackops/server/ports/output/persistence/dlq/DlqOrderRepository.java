@@ -25,4 +25,7 @@ public interface DlqOrderRepository {
     long countByStatus(String status);
 
     long countPending();
+
+    /** Total row count in dlq_orders (for throttle / disk protection). */
+    long count();
 }
