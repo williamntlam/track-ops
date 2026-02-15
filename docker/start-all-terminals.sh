@@ -189,7 +189,15 @@ if ! check_service_health "redis"; then
     exit 1
 fi
 
-# 3. Start Kafka (KRaft mode - no ZooKeeper required)
+# 3. Start Zookeeper
+print_status "Opening Zookeeper terminal..."
+open_service_terminal "zookeeper" "docker/zookeeper.yml" "$TERMINAL_CMD"
+if ! check_service_health "zookeeper"; then
+    print_error "Failed to start Zookeeper properly"
+    exit 1
+fi
+
+# 4. Start Kafka (depends on Zookeeper)
 print_status "Opening Kafka terminal..."
 open_service_terminal "kafka" "docker/kafka.yml" "$TERMINAL_CMD"
 if ! check_service_health "kafka"; then

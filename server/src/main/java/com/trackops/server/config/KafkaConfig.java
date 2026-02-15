@@ -8,7 +8,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
@@ -17,13 +16,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.listener.KafkaListenerErrorHandler;
-import org.springframework.kafka.listener.ListenerExecutionFailedException;
-import org.springframework.messaging.Message;
-import org.springframework.retry.backoff.ExponentialBackOffPolicy;
-import org.springframework.retry.policy.SimpleRetryPolicy;
-import org.springframework.retry.support.RetryTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -173,65 +165,4 @@ public class KafkaConfig {
         return new NewTopic("INVENTORY_RELEASED", 3, (short) 1);
     }
 
-    // Dead Letter Queue Topics for Debezium Consumers
-    @Bean
-    public NewTopic debeziumOrderEventDlqTopic() {
-        return new NewTopic("debezium-order-event-dlq", 3, (short) 1);
-    }
-
-    @Bean
-    public NewTopic debeziumCacheConsumerDlqTopic() {
-        return new NewTopic("debezium-cache-consumer-dlq", 3, (short) 1);
-    }
-
-    @Bean
-    public NewTopic debeziumCacheWarmerDlqTopic() {
-        return new NewTopic("debezium-cache-warmer-dlq", 3, (short) 1);
-    }
-
-    // Dead Letter Queue Configuration
-    @Bean
-    public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaTemplate<UUID, GenericRecord> kafkaTemplate) {
-        return new DeadLetterPublishingRecoverer(kafkaTemplate);
-    }
-
-    @Bean
-    public RetryTemplate retryTemplate() {
-        RetryTemplate retryTemplate = new RetryTemplate();
-        
-        // Retry policy: 3 attempts with exponential backoff
-        ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
-        backOffPolicy.setInitialInterval(1000); // 1 second
-        backOffPolicy.setMultiplier(2.0);
-        backOffPolicy.setMaxInterval(10000); // 10 seconds
-        
-        retryTemplate.setBackOffPolicy(backOffPolicy);
-        retryTemplate.setRetryPolicy(new SimpleRetryPolicy(3));
-        
-        return retryTemplate;
-    }
-
-    @Bean
-    public KafkaListenerErrorHandler debeziumErrorHandler() {
-        return new KafkaListenerErrorHandler() {
-            @Override
-            public Object handleError(Message<?> message, ListenerExecutionFailedException exception) {
-                log.error("Debezium consumer error occurred", exception);
-                
-                // Log the failed message details
-                if (message != null) {
-                    log.error("Failed message headers: {}", message.getHeaders());
-                    log.error("Failed message payload: {}", message.getPayload());
-                }
-                
-                // For now, we'll just log the error and continue
-                // In production, you might want to:
-                // 1. Send to dead letter queue
-                // 2. Retry with exponential backoff
-                // 3. Alert monitoring systems
-                
-                return null;
-            }
-        };
-    }
 }

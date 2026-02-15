@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Test Dead Letter Queue functionality
+# Test Dead Letter Queue functionality (PostgreSQL dlq_orders)
 echo "🧪 Testing Dead Letter Queue (DLQ) Functionality"
 echo "================================================"
 
@@ -8,45 +8,35 @@ echo "================================================"
 echo "📋 Checking service status..."
 curl -s http://localhost:8081/actuator/health | jq '.status' || echo "❌ Server not running"
 
-# Test DLQ endpoints
+# Test DLQ endpoints (PostgreSQL-backed)
 echo ""
 echo "🔍 Testing DLQ endpoints..."
 
 echo "1. DLQ Metrics:"
-curl -s http://localhost:8081/api/v1/dlq/metrics | jq '.' || echo "❌ DLQ metrics endpoint failed"
+curl -s http://localhost:8081/api/dlq/metrics | jq '.' || echo "❌ DLQ metrics endpoint failed"
 
 echo ""
 echo "2. DLQ Health:"
-curl -s http://localhost:8081/api/v1/dlq/health | jq '.' || echo "❌ DLQ health endpoint failed"
+curl -s http://localhost:8081/api/dlq/health | jq '.' || echo "❌ DLQ health endpoint failed"
 
 echo ""
-echo "📊 DLQ Topics Status:"
-echo "Checking if DLQ topics exist..."
-
-# Check DLQ topics
-kafka-topics --bootstrap-server localhost:9092 --list | grep -E "(dlq|DLQ)" || echo "❌ No DLQ topics found"
+echo "3. DLQ Orders (list PENDING):"
+curl -s "http://localhost:8081/api/dlq/orders?status=PENDING" | jq '.' || echo "❌ DLQ orders endpoint failed"
 
 echo ""
 echo "🎯 DLQ Configuration:"
-echo "- Retry attempts: 3"
-echo "- Backoff: Exponential (1s, 2s, 4s, 8s, 10s max)"
-echo "- Non-retryable exceptions: IllegalArgumentException, JsonProcessingException"
-echo "- DLQ topics:"
-echo "  - debezium-order-event-dlq"
-echo "  - debezium-cache-consumer-dlq" 
-echo "  - debezium-cache-warmer-dlq"
+echo "- Storage: PostgreSQL table dlq_orders"
+echo "- Max retries: 3 (configurable via app.dlq.max-retries)"
+echo "- Endpoints: GET /api/dlq/metrics, /api/dlq/health, /api/dlq/orders, /api/dlq/orders/{id}"
 
 echo ""
 echo "🚨 To test DLQ functionality:"
-echo "1. Create a malformed message in a Debezium topic"
-echo "2. Watch the logs for retry attempts"
-echo "3. Check DLQ topic for the failed message"
-echo "4. Monitor DLQ metrics endpoint"
+echo "1. Trigger a failure in the Debezium order event consumer"
+echo "2. Check dlq_orders table or GET /api/dlq/orders for the failed event"
+echo "3. Monitor GET /api/dlq/metrics for pending count"
 
 echo ""
 echo "✅ DLQ Implementation Complete!"
-echo "   - DLQ topics created"
-echo "   - Retry configuration set"
-echo "   - Error handler configured"
+echo "   - DLQ stored in PostgreSQL (dlq_orders)"
+echo "   - Error handler persists failed order events to DB"
 echo "   - Monitoring endpoints available"
-echo "   - DLQ monitor service active"
