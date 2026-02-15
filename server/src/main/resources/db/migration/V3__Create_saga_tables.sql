@@ -46,10 +46,3 @@ CREATE INDEX idx_saga_steps_step_name ON saga_steps(step_name);
 -- Create composite indexes for common queries
 CREATE INDEX idx_saga_instances_status_type ON saga_instances(status, saga_type);
 CREATE INDEX idx_saga_steps_instance_status ON saga_steps(saga_instance_id, status);
-
--- Add comments for documentation
-COMMENT ON TABLE saga_instances IS 'SAGA pattern instances for distributed transaction management';
-COMMENT ON TABLE saga_steps IS 'Individual steps within a SAGA instance';
-COMMENT ON COLUMN saga_instances.saga_type IS 'Type of SAGA (e.g., ORDER_PROCESSING)';
-COMMENT ON COLUMN saga_instances.status IS 'SAGA status: STARTED, COMPLETED, FAILED, COMPENSATING';
-COMMENT ON COLUMN saga_steps.status IS 'Step status: PENDING, STARTED, COMPLETED, FAILED, COMPENSATED';

@@ -1,4 +1,4 @@
--- Dead Letter Queue for failed order events (replaces Kafka DLQ for order events)
+-- Dead Letter Queue for failed order events (PostgreSQL DLQ)
 CREATE TABLE dlq_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id VARCHAR(255) NOT NULL,
@@ -21,5 +21,5 @@ CREATE INDEX idx_dlq_orders_order_id ON dlq_orders (order_id);
 CREATE INDEX idx_dlq_orders_status ON dlq_orders (status);
 CREATE INDEX idx_dlq_orders_created_at ON dlq_orders (created_at);
 
-COMMENT ON TABLE dlq_orders IS 'Failed order events for retry and analysis (replaces Kafka DLQ)';
+COMMENT ON TABLE dlq_orders IS 'Failed order events for retry and analysis';
 COMMENT ON COLUMN dlq_orders.status IS 'PENDING, PROCESSING, COMPLETED, PERMANENT_FAILURE';
