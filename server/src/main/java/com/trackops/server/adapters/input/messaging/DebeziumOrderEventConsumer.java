@@ -3,24 +3,27 @@ package com.trackops.server.adapters.input.messaging;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trackops.server.adapters.output.messaging.orders.KafkaOrderEventProducer;
-import com.trackops.server.domain.events.orders.OrderCreatedEvent;
+import com.trackops.server.application.services.dlq.DlqOrderService;
 import com.trackops.server.domain.events.orders.OrderCancelledEvent;
+import com.trackops.server.domain.events.orders.OrderCreatedEvent;
+import com.trackops.server.domain.model.OperationResult;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
 /**
  * Consumer for Debezium CDC events from the orders table.
- * This consumer processes database change events captured by Debezium
- * and converts them into business events for other services.
- * 
+ * Publishes to downstream (Kafka) with a circuit breaker: when the circuit is OPEN,
+ * messages are diverted to the DLQ (Pending Retry) in Postgres instead of calling Kafka.
  * Only active when app.event-publishing.strategy=debezium
  */
 @Slf4j
@@ -28,10 +31,13 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "app.event-publishing.strategy", havingValue = "debezium")
 @RequiredArgsConstructor
 public class DebeziumOrderEventConsumer {
-    
+
     private final ObjectMapper objectMapper;
     private final KafkaOrderEventProducer kafkaOrderEventProducer;
-    
+    @Qualifier("downstreamKafkaCircuitBreaker")
+    private final io.github.resilience4j.circuitbreaker.CircuitBreaker circuitBreaker;
+    private final DlqOrderService dlqOrderService;
+
     @Value("${app.event-publishing.strategy:outbox}")
     private String eventPublishingStrategy;
     
@@ -66,13 +72,13 @@ public class DebeziumOrderEventConsumer {
             
             switch (operation) {
                 case "c": // Create
-                    handleOrderCreated(event);
+                    handleOrderCreated(event, topic, payload);
                     break;
                 case "u": // Update
-                    handleOrderUpdated(event);
+                    handleOrderUpdated(event, topic, payload);
                     break;
                 case "d": // Delete
-                    handleOrderDeleted(event);
+                    handleOrderDeleted(event, topic, payload);
                     break;
                 default:
                     log.warn("Unknown Debezium operation: {}", operation);
@@ -85,93 +91,118 @@ public class DebeziumOrderEventConsumer {
     }
     
     /**
-     * Handle order created events from Debezium
+     * Handle order created events from Debezium. When circuit is OPEN, diverts to DLQ (Pending Retry).
      */
-    private void handleOrderCreated(JsonNode event) {
+    private void handleOrderCreated(JsonNode event, String topic, String rawPayload) {
         try {
             JsonNode after = event.get("payload").get("after");
             String orderIdStr = after.get("id").asText();
             String status = after.get("status").asText();
             String createdBy = after.has("created_by") ? after.get("created_by").asText() : "system";
-            
+
             UUID orderId = UUID.fromString(orderIdStr);
-            
+
             log.info("Order created via Debezium: orderId={}, status={}, createdBy={}", orderId, status, createdBy);
-            
-            // Create and publish ORDER_CREATED event for inventory service
+
             OrderCreatedEvent orderCreatedEvent = new OrderCreatedEvent(orderId, createdBy);
-            kafkaOrderEventProducer.publishOrderCreated(orderCreatedEvent);
-            
-            log.info("Successfully published ORDER_CREATED event for order: {}", orderId);
-            
+
+            try {
+                circuitBreaker.executeSupplier(() -> {
+                    OperationResult r = kafkaOrderEventProducer.publishOrderCreated(orderCreatedEvent);
+                    if (!r.isSuccess()) {
+                        throw new RuntimeException(r.getErrorMessage());
+                    }
+                    return r;
+                });
+                log.info("Successfully published ORDER_CREATED event for order: {}", orderId);
+            } catch (CallNotPermittedException e) {
+                log.warn("Circuit is OPEN. Diverting ORDER_CREATED to DLQ (Pending Retry). orderId={}", orderId);
+                dlqOrderService.saveFailedOrderEvent(topic, rawPayload, "ORDER_CREATED_circuit_open", e);
+            }
         } catch (Exception e) {
             log.error("Error handling order created event", e);
         }
     }
     
     /**
-     * Handle order updated events from Debezium
+     * Handle order updated events from Debezium. When circuit is OPEN, diverts to DLQ (Pending Retry).
      */
-    private void handleOrderUpdated(JsonNode event) {
+    private void handleOrderUpdated(JsonNode event, String topic, String rawPayload) {
         try {
             JsonNode before = event.get("payload").get("before");
             JsonNode after = event.get("payload").get("after");
-            
+
             String orderIdStr = after.get("id").asText();
             String newStatus = after.get("status").asText();
             String previousStatus = before.get("status").asText();
-            
+
             UUID orderId = UUID.fromString(orderIdStr);
-            
-            log.info("Order updated via Debezium: orderId={}, status: {} -> {}", 
+
+            log.info("Order updated via Debezium: orderId={}, status: {} -> {}",
                     orderId, previousStatus, newStatus);
-            
-            // Check if order was cancelled
+
             if ("CANCELLED".equalsIgnoreCase(newStatus) && !"CANCELLED".equalsIgnoreCase(previousStatus)) {
                 String cancelledBy = after.has("updated_by") ? after.get("updated_by").asText() : "system";
-                String cancellationReason = after.has("cancellation_reason") ? 
-                    after.get("cancellation_reason").asText() : "Order cancelled via Debezium";
-                
-                log.info("Order cancelled via Debezium: orderId={}, cancelledBy={}, reason={}", 
+                String cancellationReason = after.has("cancellation_reason") ?
+                        after.get("cancellation_reason").asText() : "Order cancelled via Debezium";
+
+                log.info("Order cancelled via Debezium: orderId={}, cancelledBy={}, reason={}",
                         orderId, cancelledBy, cancellationReason);
-                
-                // Create and publish ORDER_CANCELLED event for inventory service
+
                 OrderCancelledEvent orderCancelledEvent = new OrderCancelledEvent(orderId, cancelledBy, cancellationReason);
-                kafkaOrderEventProducer.publishOrderCancelled(orderCancelledEvent);
-                
-                log.info("Successfully published ORDER_CANCELLED event for order: {}", orderId);
+
+                try {
+                    circuitBreaker.executeSupplier(() -> {
+                        OperationResult r = kafkaOrderEventProducer.publishOrderCancelled(orderCancelledEvent);
+                        if (!r.isSuccess()) {
+                            throw new RuntimeException(r.getErrorMessage());
+                        }
+                        return r;
+                    });
+                    log.info("Successfully published ORDER_CANCELLED event for order: {}", orderId);
+                } catch (CallNotPermittedException e) {
+                    log.warn("Circuit is OPEN. Diverting ORDER_CANCELLED to DLQ (Pending Retry). orderId={}", orderId);
+                    dlqOrderService.saveFailedOrderEvent(topic, rawPayload, "ORDER_CANCELLED_circuit_open", e);
+                }
             }
-            
         } catch (Exception e) {
             log.error("Error handling order updated event", e);
         }
     }
     
     /**
-     * Handle order deleted events from Debezium
+     * Handle order deleted events from Debezium. When circuit is OPEN, diverts to DLQ (Pending Retry).
      */
-    private void handleOrderDeleted(JsonNode event) {
+    private void handleOrderDeleted(JsonNode event, String topic, String rawPayload) {
         try {
             JsonNode before = event.get("payload").get("before");
             String orderIdStr = before.get("id").asText();
-            
+
             UUID orderId = UUID.fromString(orderIdStr);
-            
+
             log.info("Order deleted via Debezium: orderId={}", orderId);
-            
-            // Treat deletion as cancellation for inventory purposes
+
             String cancelledBy = before.has("updated_by") ? before.get("updated_by").asText() : "system";
             String cancellationReason = "Order deleted via Debezium";
-            
-            log.info("Order deleted - treating as cancellation: orderId={}, cancelledBy={}", 
+
+            log.info("Order deleted - treating as cancellation: orderId={}, cancelledBy={}",
                     orderId, cancelledBy);
-            
-            // Create and publish ORDER_CANCELLED event for inventory service
+
             OrderCancelledEvent orderCancelledEvent = new OrderCancelledEvent(orderId, cancelledBy, cancellationReason);
-            kafkaOrderEventProducer.publishOrderCancelled(orderCancelledEvent);
-            
-            log.info("Successfully published ORDER_CANCELLED event for deleted order: {}", orderId);
-            
+
+            try {
+                circuitBreaker.executeSupplier(() -> {
+                    OperationResult r = kafkaOrderEventProducer.publishOrderCancelled(orderCancelledEvent);
+                    if (!r.isSuccess()) {
+                        throw new RuntimeException(r.getErrorMessage());
+                    }
+                    return r;
+                });
+                log.info("Successfully published ORDER_CANCELLED event for deleted order: {}", orderId);
+            } catch (CallNotPermittedException e) {
+                log.warn("Circuit is OPEN. Diverting ORDER_CANCELLED to DLQ (Pending Retry). orderId={}", orderId);
+                dlqOrderService.saveFailedOrderEvent(topic, rawPayload, "ORDER_CANCELLED_circuit_open", e);
+            }
         } catch (Exception e) {
             log.error("Error handling order deleted event", e);
         }
