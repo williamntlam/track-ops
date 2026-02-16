@@ -7,6 +7,7 @@ import com.trackops.server.domain.model.orders.Order;
 import com.trackops.server.ports.output.persistence.eventstore.OrderEventStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class EventPublishingService {
     private final List<EventPublishingStrategy> strategies;
     private final OrderEventStore orderEventStore;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Publish an order created event using the enabled strategy
@@ -91,6 +93,7 @@ public class EventPublishingService {
             String payloadJson = objectMapper.writeValueAsString(order);
             OrderEvent appended = orderEventStore.append(orderId, eventType, payloadJson, PAYLOAD_SCHEMA_VERSION);
             log.debug("Appended {} to event store for order {} (sequence {})", eventType, orderId, appended.getSequenceNumber());
+            eventPublisher.publishEvent(appended);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize order for event store: orderId={}", orderId, e);
         } catch (Exception e) {
@@ -106,8 +109,9 @@ public class EventPublishingService {
                 "previousStatus", previousStatus,
                 "updatedAt", order.getUpdatedAt().toString()
             ));
-            orderEventStore.append(order.getId(), "ORDER_STATUS_UPDATED", payloadJson, PAYLOAD_SCHEMA_VERSION);
+            OrderEvent appended = orderEventStore.append(order.getId(), "ORDER_STATUS_UPDATED", payloadJson, PAYLOAD_SCHEMA_VERSION);
             log.debug("Appended ORDER_STATUS_UPDATED to event store for order {}", order.getId());
+            eventPublisher.publishEvent(appended);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize status update for event store: orderId={}", order.getId(), e);
         } catch (Exception e) {

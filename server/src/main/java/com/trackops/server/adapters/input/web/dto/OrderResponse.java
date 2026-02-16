@@ -1,6 +1,7 @@
 package com.trackops.server.adapters.input.web.dto;
 
 import com.trackops.server.domain.model.enums.OrderStatus;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -69,5 +70,19 @@ public class OrderResponse {
         return java.util.Objects.hash(id, customerId, status, totalAmount, address, deliveryInstructions, createdAt, updatedAt);
     }
 
-    // Optionally, add a static factory method fromEntity(Order order) here if you want
+    /**
+     * Creates a copy of this response with status and updatedAt changed (for materialized view updates).
+     */
+    public static OrderResponse withStatusAndUpdatedAt(OrderResponse current, OrderStatus newStatus, Instant updatedAt) {
+        return new OrderResponse(
+            current.getId(),
+            current.getCustomerId(),
+            newStatus,
+            current.getTotalAmount(),
+            current.getAddress(),
+            current.getDeliveryInstructions(),
+            current.getCreatedAt(),
+            updatedAt
+        );
+    }
 } 
