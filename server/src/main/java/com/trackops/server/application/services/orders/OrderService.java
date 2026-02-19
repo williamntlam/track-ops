@@ -27,6 +27,7 @@ import com.trackops.server.application.services.saga.SagaOrchestratorService;
 import com.trackops.server.application.services.events.EventPublishingService;
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
 import com.trackops.server.ports.output.cache.OrderCachePort;
+import com.trackops.server.ports.output.cache.DistributedLockPort;
 import com.trackops.server.adapters.output.monitoring.MetricsService;
 import com.trackops.server.adapters.output.logging.StructuredLoggingService;
 import io.micrometer.core.instrument.Timer;
@@ -34,12 +35,14 @@ import java.time.Duration;
 import java.util.Optional;
 
 import java.math.BigDecimal;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,13 +58,28 @@ public class OrderService implements OrderServicePort {
     private final EventPublishingService eventPublishingService;
     private final OrderStatusCachePort orderStatusCachePort;
     private final OrderCachePort orderCachePort;
+    private final DistributedLockPort distributedLockPort;
+    private final OrderCacheBackgroundRefresher backgroundRefresher;
     private final MetricsService metricsService;
     private final StructuredLoggingService loggingService;
 
-    public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer, 
-                       OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
-                       EventPublishingService eventPublishingService, OrderStatusCachePort orderStatusCachePort,
-                       OrderCachePort orderCachePort, MetricsService metricsService, StructuredLoggingService loggingService) {
+    @Value("${app.cache.load-lock.wait-seconds:10}")
+    private long loadLockWaitSeconds;
+    @Value("${app.cache.load-lock.lease-seconds:30}")
+    private long loadLockLeaseSeconds;
+    @Value("${app.cache.probabilistic-refresh.enabled:true}")
+    private boolean probabilisticRefreshEnabled;
+    @Value("${app.cache.probabilistic-refresh.window-ratio:0.2}")
+    private double probabilisticRefreshWindowRatio;
+    @Value("${app.cache.ttl.order:3600}")
+    private long expectedOrderTtlSeconds;
+
+    public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer,
+                        OrderMapper orderMapper, SagaOrchestratorService sagaOrchestratorService,
+                        EventPublishingService eventPublishingService, OrderStatusCachePort orderStatusCachePort,
+                        OrderCachePort orderCachePort, DistributedLockPort distributedLockPort,
+                        OrderCacheBackgroundRefresher backgroundRefresher,
+                        MetricsService metricsService, StructuredLoggingService loggingService) {
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.orderMapper = orderMapper;
@@ -69,6 +87,8 @@ public class OrderService implements OrderServicePort {
         this.eventPublishingService = eventPublishingService;
         this.orderStatusCachePort = orderStatusCachePort;
         this.orderCachePort = orderCachePort;
+        this.distributedLockPort = distributedLockPort;
+        this.backgroundRefresher = backgroundRefresher;
         this.metricsService = metricsService;
         this.loggingService = loggingService;
     }
@@ -166,19 +186,17 @@ public class OrderService implements OrderServicePort {
     @Override
     public OrderResponse getOrderById(UUID orderId) {
         try {
-            // Step 1: Validate input
             if (orderId == null) {
                 throw new OrderValidationException("Order ID cannot be null");
             }
-            
-            // Step 2: Check cache first for OrderResponse
+
+            // Step 1: Check cache first (response then entity)
             Optional<OrderResponse> cachedResponse = orderCachePort.getOrderResponse(orderId);
             if (cachedResponse.isPresent()) {
                 logger.debug("Cache hit for order response: {}", orderId);
+                triggerProbabilisticRefresh(orderId, orderCachePort.getOrderResponseRemainingTtl(orderId));
                 return cachedResponse.get();
             }
-
-            // Step 3: Check cache for Order entity
             Optional<Order> cachedOrder = orderCachePort.getOrder(orderId);
             if (cachedOrder.isPresent()) {
                 logger.debug("Cache hit for order entity: {}", orderId);
@@ -186,43 +204,112 @@ public class OrderService implements OrderServicePort {
                 if (response == null) {
                     throw new RuntimeException("Failed to map cached order to response");
                 }
-                
-                // Cache the response for future requests
                 try {
                     orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
                 } catch (Exception e) {
                     logger.warn("Failed to cache order response for {}: {}", orderId, e.getMessage());
                 }
-                
+                triggerProbabilisticRefresh(orderId, orderCachePort.getOrderRemainingTtl(orderId));
                 return response;
             }
 
-            // Step 4: Database lookup
-            Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException(orderId));
-            
-            // Step 5: Map to response
-            OrderResponse response = orderMapper.orderToOrderResponse(order);
-            if (response == null) {
-                throw new RuntimeException("Failed to map order to response");
-            }
-            
-            // Step 6: Cache both entity and response
+            // Step 2: Cache miss – use distributed lock to prevent stampeding (single loader, others wait/retry)
+            Duration waitTimeout = Duration.ofSeconds(loadLockWaitSeconds);
+            Duration leaseTime = Duration.ofSeconds(loadLockLeaseSeconds);
+            boolean lockAcquired = distributedLockPort.tryLockForOrderLoad(orderId, waitTimeout, leaseTime);
             try {
-                orderCachePort.cacheOrder(order, Duration.ofHours(1));
-                orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
-                logger.debug("Cached order and response for: {}", orderId);
-            } catch (Exception e) {
-                logger.warn("Failed to cache order data for {}: {}", orderId, e.getMessage());
+                if (lockAcquired) {
+                    // Double-check cache (another replica might have filled it)
+                    Optional<OrderResponse> recheck = orderCachePort.getOrderResponse(orderId);
+                    if (recheck.isPresent()) {
+                        triggerProbabilisticRefresh(orderId, orderCachePort.getOrderResponseRemainingTtl(orderId));
+                        return recheck.get();
+                    }
+                    Optional<Order> recheckOrder = orderCachePort.getOrder(orderId);
+                    if (recheckOrder.isPresent()) {
+                        OrderResponse response = orderMapper.orderToOrderResponse(recheckOrder.get());
+                        if (response != null) {
+                            orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
+                            triggerProbabilisticRefresh(orderId, orderCachePort.getOrderRemainingTtl(orderId));
+                            return response;
+                        }
+                    }
+                    return loadOrderFromDbAndCache(orderId);
+                }
+                // Did not acquire lock – wait and re-check cache (another thread is loading)
+                long deadline = System.currentTimeMillis() + waitTimeout.toMillis();
+                while (System.currentTimeMillis() < deadline) {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    Optional<OrderResponse> retryResponse = orderCachePort.getOrderResponse(orderId);
+                    if (retryResponse.isPresent()) {
+                        logger.debug("Cache hit after waiting for loader: {}", orderId);
+                        triggerProbabilisticRefresh(orderId, orderCachePort.getOrderResponseRemainingTtl(orderId));
+                        return retryResponse.get();
+                    }
+                    Optional<Order> retryOrder = orderCachePort.getOrder(orderId);
+                    if (retryOrder.isPresent()) {
+                        OrderResponse response = orderMapper.orderToOrderResponse(retryOrder.get());
+                        if (response != null) {
+                            orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
+                            triggerProbabilisticRefresh(orderId, orderCachePort.getOrderRemainingTtl(orderId));
+                            return response;
+                        }
+                    }
+                }
+                // Timeout waiting for loader – fallback to DB to avoid indefinite wait
+                logger.debug("Lock wait timeout, loading order from DB: {}", orderId);
+                return loadOrderFromDbAndCache(orderId);
+            } finally {
+                if (lockAcquired) {
+                    distributedLockPort.unlockForOrderLoad(orderId);
+                }
             }
-            
-            return response;
-            
         } catch (OrderNotFoundException | OrderValidationException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to retrieve order: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Probabilistic early revalidation: on cache hit, with probability that increases as TTL runs down,
+     * trigger a background refresh so the cache is refreshed before expiry and load is spread over time.
+     */
+    private void triggerProbabilisticRefresh(UUID orderId, Optional<Duration> remainingTtl) {
+        if (!probabilisticRefreshEnabled || remainingTtl.isEmpty()) return;
+        long remainingSeconds = remainingTtl.get().toSeconds();
+        long windowSeconds = (long) (probabilisticRefreshWindowRatio * expectedOrderTtlSeconds);
+        if (windowSeconds <= 0 || remainingSeconds >= windowSeconds) return;
+        // Probability increases from 0 (at start of window) to 1 (at expiry): P = 1 - (remaining / window)
+        double probability = 1.0 - (remainingSeconds / (double) windowSeconds);
+        if (ThreadLocalRandom.current().nextDouble() < probability) {
+            backgroundRefresher.refreshOrderAsync(orderId);
+        }
+    }
+
+    /**
+     * Load order from database and populate cache. Caller must hold the load lock when calling.
+     */
+    private OrderResponse loadOrderFromDbAndCache(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+        OrderResponse response = orderMapper.orderToOrderResponse(order);
+        if (response == null) {
+            throw new RuntimeException("Failed to map order to response");
+        }
+        try {
+            orderCachePort.cacheOrder(order, Duration.ofHours(1));
+            orderCachePort.cacheOrderResponse(orderId, response, Duration.ofHours(1));
+            logger.debug("Cached order and response for: {}", orderId);
+        } catch (Exception e) {
+            logger.warn("Failed to cache order data for {}: {}", orderId, e.getMessage());
+        }
+        return response;
     }
 
     @Override

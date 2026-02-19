@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -17,17 +18,33 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class RedisOrderCacheAdapter implements OrderCachePort {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(RedisOrderCacheAdapter.class);
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
+    @Value("${app.cache.ttl.jitter-seconds:0}")
+    private long ttlJitterSeconds;
+
     public RedisOrderCacheAdapter(RedisTemplate<String, String> redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Applies additive jitter to TTL so keys do not all expire at once (avoids thundering herd on expiry).
+     */
+    private Duration applyJitter(Duration ttl) {
+        if (ttl == null || ttl.isZero() || ttl.isNegative() || ttlJitterSeconds <= 0) {
+            return ttl;
+        }
+        long jitter = ThreadLocalRandom.current().nextLong(0, ttlJitterSeconds + 1);
+        return ttl.plus(Duration.ofSeconds(jitter));
     }
 
     // Single Order Operations
@@ -38,11 +55,11 @@ public class RedisOrderCacheAdapter implements OrderCachePort {
             String value = objectMapper.writeValueAsString(order);
             
             if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-                redisTemplate.opsForValue().set(key, value, ttl);
+                redisTemplate.opsForValue().set(key, value, applyJitter(ttl));
             } else {
                 redisTemplate.opsForValue().set(key, value);
             }
-            
+
             logger.debug("Successfully cached order: {}", order.getId());
             return CacheOperationResult.success();
         } catch (JsonProcessingException e) {
@@ -73,6 +90,29 @@ public class RedisOrderCacheAdapter implements OrderCachePort {
             return Optional.empty();
         } catch (Exception e) {
             logger.error("Failed to get order from cache {}: {}", orderId, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public Optional<Duration> getOrderResponseRemainingTtl(UUID orderId) {
+        return getRemainingTtl(getOrderResponseKey(orderId));
+    }
+
+    @Override
+    public Optional<Duration> getOrderRemainingTtl(UUID orderId) {
+        return getRemainingTtl(getOrderKey(orderId));
+    }
+
+    private Optional<Duration> getRemainingTtl(String key) {
+        try {
+            Long seconds = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+            if (seconds == null || seconds < 0) {
+                return Optional.empty(); // -2 key missing, -1 no expiry
+            }
+            return Optional.of(Duration.ofSeconds(seconds));
+        } catch (Exception e) {
+            logger.debug("Could not get TTL for key {}: {}", key, e.getMessage());
             return Optional.empty();
         }
     }
@@ -120,11 +160,11 @@ public class RedisOrderCacheAdapter implements OrderCachePort {
             String value = objectMapper.writeValueAsString(response);
             
             if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-                redisTemplate.opsForValue().set(key, value, ttl);
+                redisTemplate.opsForValue().set(key, value, applyJitter(ttl));
             } else {
                 redisTemplate.opsForValue().set(key, value);
             }
-            
+
             logger.debug("Successfully cached order response: {}", orderId);
             return CacheOperationResult.success();
         } catch (JsonProcessingException e) {
@@ -191,11 +231,11 @@ public class RedisOrderCacheAdapter implements OrderCachePort {
             String value = objectMapper.writeValueAsString(orders);
             
             if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-                redisTemplate.opsForValue().set(key, value, ttl);
+                redisTemplate.opsForValue().set(key, value, applyJitter(ttl));
             } else {
                 redisTemplate.opsForValue().set(key, value);
             }
-            
+
             logger.debug("Successfully cached {} orders by status: {}", orders.size(), status);
             return CacheOperationResult.success();
         } catch (JsonProcessingException e) {
@@ -257,11 +297,11 @@ public class RedisOrderCacheAdapter implements OrderCachePort {
             String value = objectMapper.writeValueAsString(orders);
             
             if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-                redisTemplate.opsForValue().set(key, value, ttl);
+                redisTemplate.opsForValue().set(key, value, applyJitter(ttl));
             } else {
                 redisTemplate.opsForValue().set(key, value);
             }
-            
+
             logger.debug("Successfully cached {} orders by customer: {}", orders.size(), customerId);
             return CacheOperationResult.success();
         } catch (JsonProcessingException e) {
@@ -324,11 +364,11 @@ public class RedisOrderCacheAdapter implements OrderCachePort {
             String value = objectMapper.writeValueAsString(page);
             
             if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-                redisTemplate.opsForValue().set(key, value, ttl);
+                redisTemplate.opsForValue().set(key, value, applyJitter(ttl));
             } else {
                 redisTemplate.opsForValue().set(key, value);
             }
-            
+
             logger.debug("Successfully cached order page: {}", pageKey);
             return CacheOperationResult.success();
         } catch (Exception e) {

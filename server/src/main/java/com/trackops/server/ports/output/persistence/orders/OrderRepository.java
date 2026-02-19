@@ -16,6 +16,10 @@ public interface OrderRepository {
     List<Order> findByCustomerId(UUID customerId);
     List<Order> findAll();
     Page<Order> findAll(Pageable pageable);
+    /**
+     * Find most recently updated orders first (for cache pre-warming).
+     */
+    Page<Order> findMostRecentlyUpdated(Pageable pageable);
     void deleteById(UUID id);
     boolean existsById(UUID id);
 

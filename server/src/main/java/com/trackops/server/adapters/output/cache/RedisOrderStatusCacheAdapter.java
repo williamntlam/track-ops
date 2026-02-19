@@ -3,8 +3,8 @@ package com.trackops.server.adapters.output.cache;
 import com.trackops.server.ports.output.cache.OrderStatusCachePort;
 import com.trackops.server.domain.model.CacheOperationResult;
 import com.trackops.server.domain.model.enums.OrderStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.data.redis.connection.SortParameters.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,29 +12,36 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class RedisOrderStatusCacheAdapter implements OrderStatusCachePort {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(RedisOrderStatusCacheAdapter.class);
     private final RedisTemplate<String, String> redisTemplate;
 
+    @Value("${app.cache.ttl.jitter-seconds:0}")
+    private long ttlJitterSeconds;
+
     public RedisOrderStatusCacheAdapter(RedisTemplate<String, String> redisTemplate) {
-
         this.redisTemplate = redisTemplate;
+    }
 
+    private Duration applyJitter(Duration ttl) {
+        if (ttl == null || ttl.isZero() || ttl.isNegative() || ttlJitterSeconds <= 0) {
+            return ttl;
+        }
+        long jitter = ThreadLocalRandom.current().nextLong(0, ttlJitterSeconds + 1);
+        return ttl.plus(Duration.ofSeconds(jitter));
     }
 
     public CacheOperationResult cacheOrderStatus(UUID orderId, OrderStatus status, Duration ttl) {
         try {
-            
             String key = getOrderStatusKey(orderId);
             String value = status.name();
 
             if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
-
-                redisTemplate.opsForValue().set(key, value, ttl);
-
+                redisTemplate.opsForValue().set(key, value, applyJitter(ttl));
             }
 
             else {

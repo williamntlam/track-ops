@@ -22,6 +22,10 @@ public interface OrderCachePort {
     // Order Response Operations (for API responses)
     CacheOperationResult cacheOrderResponse(UUID orderId, OrderResponse response, Duration ttl);
     Optional<OrderResponse> getOrderResponse(UUID orderId);
+    /** Remaining TTL for order response key; empty if key missing or has no expiry. Used for probabilistic refresh. */
+    Optional<Duration> getOrderResponseRemainingTtl(UUID orderId);
+    /** Remaining TTL for order entity key; empty if key missing or has no expiry. Used for probabilistic refresh. */
+    Optional<Duration> getOrderRemainingTtl(UUID orderId);
     CacheOperationResult removeOrderResponse(UUID orderId);
     CacheOperationResult updateOrderResponse(UUID orderId, OrderResponse response, Duration ttl);
 

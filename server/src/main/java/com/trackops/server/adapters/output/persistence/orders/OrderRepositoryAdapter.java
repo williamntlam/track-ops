@@ -53,6 +53,11 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public Page<Order> findMostRecentlyUpdated(Pageable pageable) {
+        return orderJpaRepository.findAllByOrderByUpdatedAtDesc(pageable);
+    }
+
+    @Override
     public void deleteById(UUID id) {
         orderJpaRepository.deleteById(id);
     }
