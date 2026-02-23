@@ -70,6 +70,25 @@ else
     echo ""
 fi
 
+# Inventory reserve outbox connector (for app.inventory.reserve-request.mode=cdc)
+echo "🔍 Checking if TrackOps Inventory Reserve Outbox connector exists..."
+if echo "$existing_connectors" | grep -q "trackops-inventory-reserve-outbox-connector"; then
+    echo "✅ TrackOps Inventory Reserve Outbox connector already exists!"
+    echo "🔄 Restarting connector..."
+    curl -s -X POST http://localhost:8083/connectors/trackops-inventory-reserve-outbox-connector/restart > /dev/null
+else
+    echo "📦 Creating TrackOps Inventory Reserve Outbox connector..."
+    outbox_response=$(curl -s -X POST \
+      -H "Content-Type: application/json" \
+      -d @debezium-connectors/trackops-inventory-reserve-outbox-connector.json \
+      http://localhost:8083/connectors)
+    if echo "$outbox_response" | grep -q "error"; then
+        echo "⚠️  Failed to create inventory outbox connector (ensure publication includes inventory_reserve_outbox): $outbox_response"
+    else
+        echo "✅ TrackOps Inventory Reserve Outbox connector configured!"
+    fi
+fi
+
 echo "🎉 Debezium setup completed!"
 echo ""
 echo "📊 Management URLs:"

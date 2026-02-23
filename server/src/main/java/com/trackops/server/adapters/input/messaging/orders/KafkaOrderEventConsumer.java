@@ -21,6 +21,11 @@ import com.trackops.server.domain.events.orders.InventoryReleasedEvent;
 
 import java.util.UUID;
 
+/**
+ * Consumes order events from Kafka. Processing is transactional; Kafka ACK is sent only
+ * after the transaction commits, so a crash after DB write but before ACK results in
+ * redelivery. Idempotency is enforced via processed_events INSERT ON CONFLICT (event_id) DO NOTHING.
+ */
 @Slf4j
 @Component
 public class KafkaOrderEventConsumer {
@@ -55,10 +60,9 @@ public class KafkaOrderEventConsumer {
 
             OrderCreatedEvent event = avroEventConverter.fromAvro(avroRecord);
             orderEventProcessor.processOrderEvent(event);
-
             log.info("Successfully processed ORDER_CREATED event for order: {}", orderId);
+            // ACK only after transactional processing has committed (processOrderEvent is @Transactional)
             acknowledgment.acknowledge();
-
         } catch (Exception e) {
             log.error("Failed to process ORDER_CREATED event for order: {}", record.key(), e);
             // Don't acknowledge - let Kafka retry the message

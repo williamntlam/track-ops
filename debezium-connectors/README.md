@@ -5,6 +5,7 @@ This directory contains Debezium connector configurations for TrackOps.
 ## 📁 Files
 
 - `trackops-orders-connector.json` - PostgreSQL connector for orders database
+- `trackops-inventory-reserve-outbox-connector.json` - PostgreSQL connector for inventory reserve outbox table (used when `app.inventory.reserve-request.mode=cdc`)
 - `setup-debezium-connectors.sh` - Script to create connectors
 - `README.md` - This documentation
 
@@ -36,6 +37,13 @@ cd server
 - **Database**: `trackops_orders`
 - **Tables**: `orders`, `order_items`
 - **Topics**: `orders.orders`, `orders.order_items`
+
+### TrackOps Inventory Reserve Outbox Connector (CDC mode)
+- **Name**: `trackops-inventory-reserve-outbox-connector`
+- **Table**: `inventory_reserve_outbox`
+- **Topic**: `trackops_orders.public.inventory_reserve_outbox`
+- **Purpose**: When `app.inventory.reserve-request.mode=cdc`, the app enqueues rows to this table in the same transaction as order processing; Debezium streams inserts to Kafka; a relay consumer produces to `INVENTORY_RESERVE_REQUEST` and marks the row SENT.
+- **Requirement**: The PostgreSQL publication `debezium_publication` must include `inventory_reserve_outbox` (migration V10 or `ALTER PUBLICATION debezium_publication ADD TABLE inventory_reserve_outbox;`).
 
 ### Configuration Features
 - **CDC Mode**: Real-time change capture

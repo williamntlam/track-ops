@@ -41,4 +41,8 @@ public class ProcessedEventRepositoryAdapter implements ProcessedEventRepository
         processedEventJpaRepository.findByEventId(eventId).ifPresent(processedEventJpaRepository::delete);
     }
 
+    @Override
+    public int insertOnConflictDoNothing(String eventId, String orderId, String eventType, String consumerGroup, Long offsetVal) {
+        return processedEventJpaRepository.insertOnConflictDoNothing(eventId, orderId, eventType, consumerGroup, offsetVal);
+    }
 }

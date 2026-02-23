@@ -13,6 +13,8 @@ import java.util.Optional;
 
 /**
  * Error handler for Debezium consumers. Persists failed order events to the PostgreSQL dlq_orders table.
+ * Atomicity: we only allow the container to ack (by returning normally) after a successful DLQ insert.
+ * If the DLQ insert fails, we rethrow so the offset is not committed and Kafka will redeliver.
  */
 @Slf4j
 @Component("debeziumErrorHandler")
@@ -43,7 +45,8 @@ public class DlqOrderErrorHandler implements KafkaListenerErrorHandler {
                         exception
                 );
             } catch (Exception e) {
-                log.error("Failed to persist order event to DLQ table", e);
+                log.error("Failed to persist order event to DLQ table; rethrowing so offset is not committed", e);
+                throw new RuntimeException("DLQ insert failed; message will be redelivered", e);
             }
         }
 

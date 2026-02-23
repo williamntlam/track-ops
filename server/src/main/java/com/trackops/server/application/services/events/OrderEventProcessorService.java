@@ -1,79 +1,74 @@
 package com.trackops.server.application.services.events;
 
-import org.springframework.stereotype.Service;
-import com.trackops.server.ports.input.events.OrderEventProcessorPort;
-import com.trackops.server.domain.events.orders.OrderEvent;
-import com.trackops.server.domain.events.orders.InventoryReservedEvent;
-import com.trackops.server.domain.events.orders.InventoryReservationFailedEvent;
-import com.trackops.server.domain.events.orders.InventoryReleasedEvent;
-import com.trackops.server.ports.output.persistence.orders.OrderRepository;
-import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
-import com.trackops.server.ports.output.cache.IdempotencyCachePort; 
 import com.trackops.server.domain.model.CacheOperationResult;
-import com.trackops.server.domain.model.events.ProcessedEvent;
 import com.trackops.server.domain.model.orders.Order;
-import com.trackops.server.domain.model.enums.EventType;
+import com.trackops.server.domain.events.orders.InventoryReleasedEvent;
+import com.trackops.server.domain.events.orders.InventoryReservationFailedEvent;
+import com.trackops.server.domain.events.orders.InventoryReservedEvent;
+import com.trackops.server.domain.events.orders.OrderEvent;
 import com.trackops.server.domain.model.enums.OrderStatus;
-import java.time.Duration;
-import java.util.UUID;
+import com.trackops.server.ports.input.events.OrderEventProcessorPort;
+import com.trackops.server.ports.output.cache.IdempotencyCachePort;
+import com.trackops.server.ports.output.inventory.InventoryReservationRequestPort;
+import com.trackops.server.ports.output.persistence.events.ProcessedEventRepository;
+import com.trackops.server.ports.output.persistence.orders.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.util.UUID;
 
 @Service
 public class OrderEventProcessorService implements OrderEventProcessorPort {
 
     private static final Logger log = LoggerFactory.getLogger(OrderEventProcessorService.class);
+    private static final String CONSUMER_GROUP = "trackops-orders";
 
     private final OrderRepository orderRepository;
     private final ProcessedEventRepository processedEventRepository;
     private final IdempotencyCachePort idempotencyCachePort;
+    private final InventoryReservationRequestPort inventoryReservationRequestPort;
 
-    public OrderEventProcessorService(OrderRepository orderRepository, ProcessedEventRepository processedEventRepository, IdempotencyCachePort idempotencyCachePort) {
-        
+    public OrderEventProcessorService(OrderRepository orderRepository, ProcessedEventRepository processedEventRepository, IdempotencyCachePort idempotencyCachePort, InventoryReservationRequestPort inventoryReservationRequestPort) {
         this.orderRepository = orderRepository;
         this.processedEventRepository = processedEventRepository;
         this.idempotencyCachePort = idempotencyCachePort;
-
+        this.inventoryReservationRequestPort = inventoryReservationRequestPort;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void processOrderEvent(OrderEvent event) {
-        
-        try {
-            // Validate input event
-            validateEvent(event);
-            
-            UUID eventId = event.getEventId();
-            UUID orderId = event.getOrderId();
+        validateEvent(event);
+        UUID eventId = event.getEventId();
+        UUID orderId = event.getOrderId();
 
-            // Step One: Check idempotency
-            if (idempotencyCachePort.isEventProcessed(eventId)) {
-                return; // Already processed
-            }
+        // Idempotency: try to claim this event with ON CONFLICT DO NOTHING. If 0 rows, already processed (e.g. redelivery).
+        int inserted = processedEventRepository.insertOnConflictDoNothing(
+                eventId.toString(),
+                orderId.toString(),
+                event.getEventType(),
+                CONSUMER_GROUP,
+                0L);
+        if (inserted == 0) {
+            log.debug("Event already processed (idempotent skip): eventId={}", eventId);
+            return;
+        }
 
-            // Step Two: Handle different event types
-            Order processedOrder = handleEventByType(event, orderId);
+        // Handle event (only runs for first-time processing)
+        Order processedOrder = handleEventByType(event, orderId);
 
-            // Step Three: Mark event as processed
-            ProcessedEvent processedEvent = ProcessedEvent.createForOrderEvent(
-                eventId,
-                orderId,
-                EventType.valueOf(event.getEventType()),
-                processedOrder.getStatus(), 
-                "order-processor",
-                0L
-            );
-            processedEventRepository.save(processedEvent);
+        // Notify inventory so they can reserve; ack only after this succeeds (blocking until Kafka ack)
+        if ("ORDER_CREATED".equals(event.getEventType())) {
+            inventoryReservationRequestPort.requestReservation(orderId);
+        }
 
-            // Step Four: Mark as processed in idempotency cache
-            CacheOperationResult cacheResult = idempotencyCachePort.markEventProcessed(eventId, Duration.ofHours(24));
-            if (cacheResult.isFailure()) {
-                log.warn("Failed to mark event {} as processed in cache: {}", eventId, cacheResult.getErrorMessage());
-                // Don't fail the entire operation, just log the warning
-            }
-
-        } catch (Exception e) {
-            log.error("Failed to process order event: {}", event.getEventId(), e);
-            throw new RuntimeException("Failed to process order event", e);
+        // Optional: mark in Redis for fast path on next time
+        CacheOperationResult cacheResult = idempotencyCachePort.markEventProcessed(eventId, Duration.ofHours(24));
+        if (cacheResult.isFailure()) {
+            log.warn("Failed to mark event {} as processed in cache: {}", eventId, cacheResult.getErrorMessage());
         }
     }
 

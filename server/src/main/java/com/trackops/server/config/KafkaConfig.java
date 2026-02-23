@@ -8,6 +8,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;
@@ -128,6 +129,29 @@ public class KafkaConfig {
         return factory;
     }
 
+    /** Consumer for CDC topics (Debezium JSON payload). */
+    @Bean
+    public ConsumerFactory<String, String> cdcStringConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId + "-cdc");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> cdcStringListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+            new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(cdcStringConsumerFactory());
+        factory.getContainerProperties().setAckMode(
+            org.springframework.kafka.listener.ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        return factory;
+    }
+
     // Topic Definitions
     @Bean
     public NewTopic orderCreatedTopic() {
@@ -150,6 +174,11 @@ public class KafkaConfig {
     }
 
     // Inventory Service Response Topics
+    @Bean
+    public NewTopic inventoryReserveRequestTopic() {
+        return new NewTopic("INVENTORY_RESERVE_REQUEST", 3, (short) 1);
+    }
+
     @Bean
     public NewTopic inventoryReservedTopic() {
         return new NewTopic("INVENTORY_RESERVED", 3, (short) 1);
