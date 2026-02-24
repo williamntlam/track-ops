@@ -109,6 +109,19 @@ start_service "redis" "docker/redis.yml"
 # 3. Start Kafka (KRaft mode - no ZooKeeper required)
 start_service "kafka" "docker/kafka.yml"
 
+# 4. Start target Kafka and MirrorMaker 2 (cross-cluster replication)
+print_status "Starting target Kafka (MM2 replica)..."
+docker compose -f docker/kafka-target.yml up -d
+print_status "Starting MirrorMaker 2 Connect..."
+docker compose -f docker/mirror-maker-2.yml up -d
+sleep 15
+if curl -sf http://localhost:8086/connectors > /dev/null 2>&1; then
+    print_success "MirrorMaker 2 Connect is ready!"
+    [ -f "./scripts/setup-mm2-connectors.sh" ] && ./scripts/setup-mm2-connectors.sh || true
+else
+    print_warning "MirrorMaker 2 Connect not ready yet (connectors can be registered later: ./scripts/setup-mm2-connectors.sh)"
+fi
+
 # 5. Start Prometheus
 start_service "prometheus" "docker/prometheus.yml"
 
@@ -159,6 +172,8 @@ print_status "  Prometheus:           http://localhost:9090"
 print_status "  PostgreSQL:           localhost:5432"
 print_status "  Redis:                localhost:6379"
 print_status "  Kafka:                 localhost:9092"
+print_status "  Kafka (target/MM2):    localhost:9094"
+print_status "  MirrorMaker 2:        http://localhost:8086"
 print_status "======================================"
 
 # Show running containers

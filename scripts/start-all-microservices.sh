@@ -123,6 +123,28 @@ else
     print_warning "Debezium setup script not found, skipping..."
 fi
 
+# Step 3b: Wait for MirrorMaker 2 Connect and setup MM2 Connectors
+print_status "Phase 3b: Setting up MirrorMaker 2 Connectors..."
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'trackops-mirror-maker-2'; then
+    print_status "Waiting for MirrorMaker 2 Connect to be ready..."
+    for i in $(seq 1 30); do
+        if curl -sf http://localhost:8086/connectors > /dev/null 2>&1; then
+            print_success "MirrorMaker 2 Connect is ready!"
+            break
+        fi
+        print_status "Attempt $i/30: MirrorMaker 2 Connect not ready yet..."
+        sleep 2
+    done
+    if [ -f "./scripts/setup-mm2-connectors.sh" ]; then
+        ./scripts/setup-mm2-connectors.sh
+        print_success "MirrorMaker 2 connectors configured!"
+    else
+        print_warning "MM2 setup script not found, skipping..."
+    fi
+else
+    print_warning "MirrorMaker 2 container not running, skipping MM2 connector setup..."
+fi
+
 # Step 4: Start Microservices
 print_status "Phase 4: Starting Microservices..."
 
@@ -246,12 +268,13 @@ wait_for_service_health "Event Relay Service" "$EVENT_RELAY_SERVICE_URL" 30
 print_success "🎉 All services started successfully!"
 echo ""
 echo "🌐 Service URLs:"
-echo "  - Order Service:     http://localhost:8081"
-echo "  - Inventory Service: http://localhost:8082"
+echo "  - Order Service:       http://localhost:8081"
+echo "  - Inventory Service:   http://localhost:8082"
 echo "  - Event Relay Service: http://${EVENT_RELAY_SERVICE_HOST}:${EVENT_RELAY_SERVICE_PORT}"
-echo "  - Debezium Connect: http://localhost:8083"
-echo "  - Kafka UI:          http://localhost:8080"
-echo "  - pgAdmin:           http://localhost:5050"
+echo "  - Debezium Connect:    http://localhost:8083"
+echo "  - MirrorMaker 2:       http://localhost:8086"
+echo "  - Kafka UI:            http://localhost:8080"
+echo "  - pgAdmin:             http://localhost:5050"
 echo ""
 echo "📊 Monitoring:"
 echo "  - All services run in background"

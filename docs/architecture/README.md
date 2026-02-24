@@ -460,3 +460,8 @@ public class DebeziumHealthIndicator implements HealthIndicator {
 ```
 
 This architecture demonstrates **enterprise-grade system design** with advanced patterns including CDC, distributed caching, event-driven architecture, and comprehensive fault tolerance. The system showcases sophisticated software engineering practices suitable for large-scale production environments.
+
+## Related documentation
+
+- **[MirrorMaker 2 (MM2)](./MIRRORMAKER2.md)** – Cross-cluster Kafka replication for disaster recovery and failover
+- **[Idempotent consumers](./IDEMPOTENT-CONSUMERS.md)** – Consumer design for safe replay and exactly-once semantics

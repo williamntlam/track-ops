@@ -1,0 +1,17 @@
+{
+  "name": "trackops-mm2-source",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.mirror.MirrorSourceConnector",
+    "source.cluster.alias": "source",
+    "target.cluster.alias": "target",
+    "source.cluster.bootstrap.servers": "trackops-kafka:9092",
+    "target.cluster.bootstrap.servers": "trackops-kafka-target:9092",
+    "topics": ".*",
+    "topics.exclude": ".*[.]internal|.*\\.replica|__consumer_offsets|__transaction_state|connect-.*|mm2-.*",
+    "replication.policy.class": "org.apache.kafka.connect.mirror.IdentityReplicationPolicy",
+    "sync.topic.configs.enabled": "true",
+    "sync.topic.acls.enabled": "false",
+    "refresh.topics.interval.seconds": "60",
+    "refresh.groups.interval.seconds": "60"
+  }
+}

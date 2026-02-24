@@ -1,0 +1,15 @@
+{
+  "name": "trackops-mm2-checkpoint",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.mirror.MirrorCheckpointConnector",
+    "source.cluster.alias": "source",
+    "target.cluster.alias": "target",
+    "source.cluster.bootstrap.servers": "trackops-kafka:9092",
+    "target.cluster.bootstrap.servers": "trackops-kafka-target:9092",
+    "groups": ".*",
+    "groups.exclude": "console-consumer.*|connect-.*|mm2-.*",
+    "replication.policy.class": "org.apache.kafka.connect.mirror.IdentityReplicationPolicy",
+    "refresh.groups.interval.seconds": "60",
+    "sync.group.offsets.enabled": "true"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "trackops-mm2-heartbeat",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.mirror.MirrorHeartbeatConnector",
+    "source.cluster.alias": "source",
+    "target.cluster.alias": "target",
+    "source.cluster.bootstrap.servers": "trackops-kafka:9092",
+    "target.cluster.bootstrap.servers": "trackops-kafka-target:9092",
+    "replication.policy.class": "org.apache.kafka.connect.mirror.IdentityReplicationPolicy",
+    "heartbeats.topic.interval.seconds": "10"
+  }
+}

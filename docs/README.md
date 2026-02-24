@@ -18,6 +18,7 @@ This documentation is organized by service and component for comprehensive under
 - **[Docker Setup](./docker/README.md)** - Container configuration and management
 - **[Docker Setup Guide](./docker/DOCKER-SETUP.md)** - Complete Docker setup instructions
 - **[Architecture](./architecture/)** - System design patterns and principles
+- **[MirrorMaker 2 (MM2)](./architecture/MIRRORMAKER2.md)** - Cross-cluster Kafka replication (DR / failover)
 - **[API Reference](./api/)** - Comprehensive API documentation
 - **[Standards](./standards/)** - Enterprise coding practices and conventions
 - **[Patterns](./patterns/)** - Advanced design patterns and implementations

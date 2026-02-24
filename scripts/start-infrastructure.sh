@@ -31,6 +31,14 @@ docker compose -f docker/redis.yml up -d
 echo "Starting Kafka and Schema Registry..."
 docker compose -f docker/kafka.yml up -d
 
+# Start target Kafka (MirrorMaker 2 replica cluster)
+echo "Starting target Kafka (MM2 replica)..."
+docker compose -f docker/kafka-target.yml up -d
+
+# Start MirrorMaker 2 Connect worker
+echo "Starting MirrorMaker 2 Connect..."
+docker compose -f docker/mirror-maker-2.yml up -d
+
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be ready..."
 sleep 30
@@ -51,6 +59,10 @@ docker exec trackops-redis redis-cli ping || echo "⚠️  redis not ready"
 # Check Kafka
 echo "Checking Kafka..."
 docker exec trackops-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 || echo "⚠️  kafka not ready"
+
+# Check target Kafka (MM2)
+echo "Checking target Kafka..."
+docker exec trackops-kafka-target kafka-broker-api-versions --bootstrap-server localhost:9092 || echo "⚠️  kafka-target not ready"
 
 # Check Schema Registry
 echo "Checking Schema Registry..."
@@ -77,6 +89,7 @@ echo "⚠️  NOTE: Infrastructure services are running, but microservices are N
 echo ""
 echo "🌐 Infrastructure Service URLs:"
 echo "  - Debezium Connect: http://localhost:8083"
+echo "  - MirrorMaker 2 Connect: http://localhost:8086"
 echo "  - Schema Registry: http://localhost:8085"
 echo "  - Kafka UI: http://localhost:8080"
 echo "  - pgAdmin: http://localhost:5050 (admin@trackops.com / admin)"
@@ -86,7 +99,8 @@ echo "  - Server DB: localhost:5432/trackops_orders"
 echo "  - Inventory DB: localhost:5433/trackops_inventory"
 echo "  - Event Relay DB: localhost:5434/trackops_event_relay"
 echo "  - Redis: localhost:6379"
-echo "  - Kafka: localhost:9092"
+echo "  - Kafka (source): localhost:9092"
+echo "  - Kafka (target/MM2): localhost:9094"
 echo ""
 echo "🎯 To start the microservices (Order, Inventory, Event Relay), run:"
 echo "  ./scripts/start-all-microservices.sh"

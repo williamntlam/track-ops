@@ -7,6 +7,8 @@ This directory contains individual Docker Compose service definitions for the Tr
 - `postgres.yml` - PostgreSQL database configuration
 - `redis.yml` - Redis cache configuration  
 - `kafka.yml` - Kafka message broker configuration (KRaft mode - no ZooKeeper required)
+- `kafka-target.yml` - Target Kafka cluster for MirrorMaker 2 (cross-cluster replication / DR)
+- `mirror-maker-2.yml` - MirrorMaker 2.0 Connect worker (replicates source → target cluster). See [MIRRORMAKER2.md](../architecture/MIRRORMAKER2.md).
 - `prometheus.yml` - Prometheus monitoring configuration
 - `grafana.yml` - Grafana dashboards configuration
 - `trackops-server.yml` - TrackOps Spring Boot application configuration

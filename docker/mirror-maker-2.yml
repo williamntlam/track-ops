@@ -1,0 +1,39 @@
+# MirrorMaker 2.0 (MM2) - Kafka Connect worker for cross-cluster replication.
+# Requires: source cluster (docker/kafka.yml) and target cluster (docker/kafka-target.yml).
+# Connect state (config/offset/status) is stored on the source cluster.
+services:
+  mirror-maker-2:
+    build:
+      context: ./mirror-maker-2
+      dockerfile: Dockerfile
+    image: trackops-mirror-maker-2:7.6.0
+    container_name: trackops-mirror-maker-2
+    environment:
+      # Connect worker (dedicated cluster for MM2, separate from Debezium)
+      BOOTSTRAP_SERVERS: trackops-kafka:9092
+      GROUP_ID: mirror-maker-2-cluster
+      CONFIG_STORAGE_TOPIC: mm2_configs
+      OFFSET_STORAGE_TOPIC: mm2_offsets
+      STATUS_STORAGE_TOPIC: mm2_status
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.converters.ByteArrayConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.converters.ByteArrayConverter
+      # Rest API
+      LISTENERS: http://0.0.0.0:8086
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/connectors"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - trackops-network
+    restart: unless-stopped
+
+networks:
+  trackops-network:
+    external: true
