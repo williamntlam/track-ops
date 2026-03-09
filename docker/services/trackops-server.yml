@@ -1,0 +1,31 @@
+services:
+  # TrackOps Spring Boot Application
+  trackops-server:
+    build:
+      context: ../services/server
+      dockerfile: Dockerfile
+    container_name: trackops-server
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://trackops-postgres-server:5432/trackops_orders
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_REDIS_HOST: trackops-redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:9092
+      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8085
+    networks:
+      - trackops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+networks:
+  trackops-network:
+    external: true

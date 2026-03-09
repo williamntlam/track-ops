@@ -1,0 +1,28 @@
+services:
+  event-relay-service:
+    build:
+      context: ../services/event-relay-service
+      dockerfile: Dockerfile
+    container_name: trackops-event-relay-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://trackops-postgres-event-relay:5432/trackops_event_relay
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:9092
+      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8085
+    ports:
+      - "${EVENT_RELAY_SERVICE_PORT:-8084}:8084"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - trackops-network
+    restart: unless-stopped
+
+networks:
+  trackops-network:
+    external: true

@@ -1,0 +1,30 @@
+services:
+  inventory-service:
+    build:
+      context: ../services/inventory-service
+      dockerfile: Dockerfile
+    container_name: trackops-inventory-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://trackops-postgres-inventory:5432/trackops_inventory
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: trackops-kafka:9092
+      SPRING_REDIS_HOST: trackops-redis
+      SPRING_REDIS_PORT: 6379
+      SCHEMA_REGISTRY_URL: http://trackops-schema-registry:8085
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - trackops-network
+    restart: unless-stopped
+
+networks:
+  trackops-network:
+    external: true

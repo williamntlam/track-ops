@@ -28,7 +28,7 @@ All event schemas are stored in `/schemas/avro/`:
 
 ### 3. Schema Registry Service
 
-Added to `docker/kafka.yml`:
+Added to `docker/services/kafka.yml`:
 - Runs on port 8081
 - Configured with BACKWARD compatibility (default)
 - Automatically creates `_schemas` topic in Kafka
@@ -150,7 +150,7 @@ The default compatibility level is **BACKWARD**, which means:
 
 1. Start Schema Registry:
    ```bash
-   docker-compose -f docker/kafka.yml up -d
+   docker compose -f docker/services/kafka.yml up -d
    ```
 
 2. Verify Schema Registry is running:

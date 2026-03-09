@@ -4,8 +4,8 @@ MirrorMaker 2.0 provides **cross-cluster replication** for disaster recovery, da
 
 ## Overview
 
-- **Source cluster**: Primary Kafka (`trackops-kafka`, from `docker/kafka.yml`).
-- **Target cluster**: Replica Kafka (`trackops-kafka-target`, from `docker/kafka-target.yml`).
+- **Source cluster**: Primary Kafka (`trackops-kafka`, from `docker/services/kafka.yml`).
+- **Target cluster**: Replica Kafka (`trackops-kafka-target`, from `docker/services/kafka-target.yml`).
 - **MM2 Connect worker**: Dedicated Connect cluster that runs only MM2 connectors (port **8086**), separate from Debezium Connect (port 8083).
 
 ## Features
@@ -34,13 +34,13 @@ Start the source Kafka, then the target Kafka, then the MM2 Connect worker (crea
 docker network create trackops-network 2>/dev/null || true
 
 # Source cluster (and Schema Registry)
-docker compose -f docker/kafka.yml up -d
+docker compose -f docker/services/kafka.yml up -d
 
 # Target cluster
-docker compose -f docker/kafka-target.yml up -d
+docker compose -f docker/services/kafka-target.yml up -d
 
 # MM2 Connect worker (builds image on first run)
-docker compose -f docker/mirror-maker-2.yml up -d
+docker compose -f docker/services/mirror-maker-2.yml up -d
 ```
 
 ### 2. Register MM2 connectors
@@ -48,13 +48,13 @@ docker compose -f docker/mirror-maker-2.yml up -d
 After MM2 Connect is healthy (e.g. `curl -s http://localhost:8086/connectors` returns `[]`):
 
 ```bash
-./scripts/setup-mm2-connectors.sh
+./scripts/infra/mm2/setup-mm2-connectors.sh
 ```
 
 Optional: use a different MM2 URL:
 
 ```bash
-MM2_CONNECT_URL=http://localhost:8086 ./scripts/setup-mm2-connectors.sh
+MM2_CONNECT_URL=http://localhost:8086 ./scripts/infra/mm2/setup-mm2-connectors.sh
 ```
 
 ### 3. Verify

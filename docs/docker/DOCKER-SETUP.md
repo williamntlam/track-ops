@@ -38,11 +38,11 @@ Complete Docker containerization for all TrackOps microservices with databases a
 ### 1. Start Infrastructure
 ```bash
 # Start all databases and message brokers (includes database initialization)
-./scripts/start-infrastructure.sh
+./scripts/infra/start-infrastructure.sh
 
 # Or manually
 docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka
-./scripts/init-databases.sh
+./scripts/infra/init-databases.sh
 ```
 
 ### 2. Start Microservices
@@ -99,24 +99,24 @@ cd event-relay-service
 ## 🔧 Configuration Files
 
 ### Docker Profiles
-- `server/src/main/resources/application-docker.properties`
-- `inventory-service/src/main/resources/application-docker.properties`
-- `event-relay-service/src/main/resources/application-docker.properties`
+- `services/server/src/main/resources/application-docker.properties`
+- `services/inventory-service/src/main/resources/application-docker.properties`
+- `services/event-relay-service/src/main/resources/application-docker.properties`
 
 ### Database Migrations
-- `server/src/main/resources/db/migration/V1__Create_orders_tables.sql`
-- `server/src/main/resources/db/migration/V2__Create_processed_events_table.sql`
-- `server/src/main/resources/db/migration/V3__Create_saga_tables.sql`
-- `inventory-service/src/main/resources/db/migration/V1__Create_inventory_tables.sql`
-- `inventory-service/src/main/resources/db/migration/V2__Add_inventory_business_fields.sql`
-- `event-relay-service/src/main/resources/db/migration/V1__Create_outbox_events_table.sql`
+- `services/server/src/main/resources/db/migration/V1__Create_orders_tables.sql`
+- `services/server/src/main/resources/db/migration/V2__Create_processed_events_table.sql`
+- `services/server/src/main/resources/db/migration/V3__Create_saga_tables.sql`
+- `services/inventory-service/src/main/resources/db/migration/V1__Create_inventory_tables.sql`
+- `services/inventory-service/src/main/resources/db/migration/V2__Add_inventory_business_fields.sql`
+- `services/event-relay-service/src/main/resources/db/migration/V1__Create_outbox_events_table.sql`
 
 ### Database Initialization Scripts
-- `scripts/init-databases.sh` - Comprehensive database setup with tables and sample data
-- `server/setup-database.sql` - Order service specific setup
-- `inventory-service/setup-database.sql` - Inventory service specific setup
-- `event-relay-service/setup-database.sql` - Event relay service specific setup
-- `scripts/setup-all-databases.sql` - Complete database setup for all services
+- `scripts/infra/init-databases.sh` - Comprehensive database setup with tables and sample data
+- `scripts/db/server-setup-database.sql` - Order service specific setup
+- `scripts/db/inventory-setup-database.sql` - Inventory service specific setup
+- `scripts/db/event-relay-setup-database.sql` - Event relay service specific setup
+- `scripts/db/setup-all-databases.sql` - Complete database setup for all services
 
 ## 🐳 Docker Compose Services
 

@@ -4,14 +4,20 @@ This directory contains individual Docker Compose service definitions for the Tr
 
 ## Service Files
 
-- `postgres.yml` - PostgreSQL database configuration
-- `redis.yml` - Redis cache configuration  
-- `kafka.yml` - Kafka message broker configuration (KRaft mode - no ZooKeeper required)
-- `kafka-target.yml` - Target Kafka cluster for MirrorMaker 2 (cross-cluster replication / DR)
-- `mirror-maker-2.yml` - MirrorMaker 2.0 Connect worker (replicates source → target cluster). See [MIRRORMAKER2.md](../architecture/MIRRORMAKER2.md).
-- `prometheus.yml` - Prometheus monitoring configuration
-- `grafana.yml` - Grafana dashboards configuration
-- `trackops-server.yml` - TrackOps Spring Boot application configuration
+All Docker Compose service definitions now live under `docker/services`:
+
+- `docker/services/postgres.yml` - PostgreSQL database configuration
+- `docker/services/redis.yml` - Redis cache configuration  
+- `docker/services/kafka.yml` - Kafka message broker configuration (KRaft mode - no ZooKeeper required)
+- `docker/services/kafka-target.yml` - Target Kafka cluster for MirrorMaker 2 (cross-cluster replication / DR)
+- `docker/services/mirror-maker-2.yml` - MirrorMaker 2.0 Connect worker (replicates source → target cluster). See [MIRRORMAKER2.md](../architecture/MIRRORMAKER2.md).
+- `docker/services/debezium-connect.yml` - Debezium Connect worker
+- `docker/services/prometheus.yml` - Prometheus monitoring configuration
+- `docker/services/prometheus-local.yml` - Prometheus scrape configuration
+- `docker/services/grafana.yml` - Grafana dashboards configuration
+- `docker/services/trackops-server.yml` - TrackOps Spring Boot application configuration
+- `docker/services/inventory-service.yml` - Inventory Service container
+- `docker/services/event-relay-service.yml` - Event Relay Service container
 
 ## Usage
 
@@ -21,40 +27,31 @@ The easiest way to manage all services is using the provided scripts:
 
 ```bash
 # Start all services in correct order with health checks (single terminal)
-./docker/start-all.sh
+./scripts/docker/start-all.sh
 
 # Start all services in separate terminal windows (better for monitoring)
-./docker/start-all-terminals.sh
+./scripts/docker/start-all-terminals.sh
 
 # Check status of all services
-./docker/status.sh
+./scripts/docker/status.sh
 
 # Stop all services
-./docker/stop-all.sh
+./scripts/docker/stop-all.sh
 
 # Monitor logs in separate terminals (for already running services)
-./docker/monitor-logs.sh
+./scripts/docker/monitor-logs.sh
 ```
-
-### Manual Docker Compose Usage
-
-The main `docker-compose.yml` file in the project root includes all these services. You can:
-
-1. **Start all services**: `docker-compose up -d`
-2. **Start specific services**: `docker-compose up -d postgres redis`
-3. **View logs**: `docker-compose logs -f [service-name]`
-4. **Stop services**: `docker-compose down`
 
 ### Individual Service Management
 
-You can also run individual service files directly:
+You can also run individual service files directly from the project root:
 
 ```bash
 # Start only PostgreSQL
-docker-compose -f docker/postgres.yml up -d
+docker compose -f docker/services/postgres.yml up -d
 
 # Start only Redis
-docker-compose -f docker/redis.yml up -d
+docker compose -f docker/services/redis.yml up -d
 ```
 
 ## Startup Script Features
