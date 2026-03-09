@@ -8,7 +8,7 @@ Complete Docker containerization for all TrackOps microservices with databases a
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Server        │    │  Inventory      │    │  Event Relay    │
 │   (Orders)      │    │  Service        │    │  Service        │
-│   Port: 8081    │    │  Port: 8082     │    │  Port: 8083     │
+│   Port: 8081    │    │  Port: 8082     │    │  Port: 8084     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -40,23 +40,23 @@ Complete Docker containerization for all TrackOps microservices with databases a
 # Start all databases and message brokers (includes database initialization)
 ./scripts/infra/start-infrastructure.sh
 
-# Or manually
+# Or manually (from project root)
 docker compose up -d postgres-server postgres-inventory postgres-event-relay redis kafka
-./scripts/infra/init-databases.sh
+./scripts/db/init-databases.sh
 ```
 
 ### 2. Start Microservices
 ```bash
 # Server (Order Service)
-cd server
+cd services/order-service
 ./gradlew bootRun --args='--spring.profiles.active=docker'
 
 # Inventory Service  
-cd inventory-service
+cd services/inventory-service
 ./gradlew bootRun --args='--spring.profiles.active=docker'
 
 # Event Relay Service
-cd event-relay-service
+cd services/event-relay-service
 ./gradlew bootRun --args='--spring.profiles.active=docker'
 ```
 
@@ -66,7 +66,7 @@ cd event-relay-service
 |---------|-----|-------------|
 | **Server** | http://localhost:8081 | Order management API |
 | **Inventory** | http://localhost:8082 | Inventory management API |
-| **Event Relay** | http://localhost:8083 | Event processing API |
+| **Event Relay** | http://localhost:8084 | Event processing API |
 | **Kafka UI** | http://localhost:8080 | Kafka monitoring |
 | **pgAdmin** | http://localhost:5050 | Database management |
 
@@ -99,20 +99,20 @@ cd event-relay-service
 ## 🔧 Configuration Files
 
 ### Docker Profiles
-- `services/server/src/main/resources/application-docker.properties`
+- `services/order-service/src/main/resources/application-docker.properties`
 - `services/inventory-service/src/main/resources/application-docker.properties`
 - `services/event-relay-service/src/main/resources/application-docker.properties`
 
 ### Database Migrations
-- `services/server/src/main/resources/db/migration/V1__Create_orders_tables.sql`
-- `services/server/src/main/resources/db/migration/V2__Create_processed_events_table.sql`
-- `services/server/src/main/resources/db/migration/V3__Create_saga_tables.sql`
+- `services/order-service/src/main/resources/db/migration/V1__Create_orders_tables.sql`
+- `services/order-service/src/main/resources/db/migration/V2__Create_processed_events_table.sql`
+- `services/order-service/src/main/resources/db/migration/V3__Create_saga_tables.sql`
 - `services/inventory-service/src/main/resources/db/migration/V1__Create_inventory_tables.sql`
 - `services/inventory-service/src/main/resources/db/migration/V2__Add_inventory_business_fields.sql`
 - `services/event-relay-service/src/main/resources/db/migration/V1__Create_outbox_events_table.sql`
 
 ### Database Initialization Scripts
-- `scripts/infra/init-databases.sh` - Comprehensive database setup with tables and sample data
+- `scripts/db/init-databases.sh` - Comprehensive database setup with tables and sample data
 - `scripts/db/server-setup-database.sql` - Order service specific setup
 - `scripts/db/inventory-setup-database.sql` - Inventory service specific setup
 - `scripts/db/event-relay-setup-database.sql` - Event relay service specific setup
@@ -144,21 +144,21 @@ curl http://localhost:8081/actuator/health
 curl http://localhost:8082/actuator/health
 
 # Event Relay Service
-curl http://localhost:8083/actuator/health
+curl http://localhost:8084/actuator/health
 ```
 
 ### Database Health
 ```bash
 # Check PostgreSQL services
-docker-compose exec postgres-server pg_isready -U postgres -d trackops_orders
-docker-compose exec postgres-inventory pg_isready -U postgres -d trackops_inventory
-docker-compose exec postgres-event-relay pg_isready -U postgres -d trackops_event_relay
+docker compose exec postgres-server pg_isready -U postgres -d trackops_orders
+docker compose exec postgres-inventory pg_isready -U postgres -d trackops_inventory
+docker compose exec postgres-event-relay pg_isready -U postgres -d trackops_event_relay
 
 # Check Redis
-docker-compose exec redis redis-cli ping
+docker compose exec redis redis-cli ping
 
 # Check Kafka
-docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
+docker compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
 ```
 
 ## 🛠️ Troubleshooting
@@ -166,7 +166,7 @@ docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost
 ### Common Issues
 
 1. **Port Conflicts**
-   - Ensure ports 5432-5434, 6379, 8080-8083, 9092, 5050 are available
+   - Ensure ports 5432-5434, 6379, 8080-8085, 9092, 5050 are available
 
 2. **Database Connection Issues**
    - Wait for databases to be fully initialized (30-60 seconds)
@@ -175,33 +175,33 @@ docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost
 3. **Kafka Connection Issues**
    - Kafka uses KRaft mode (no ZooKeeper required)
    - Check Kafka UI at http://localhost:8080
-   - Verify Kafka is healthy: `docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092`
+   - Verify Kafka is healthy: `docker compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092`
 
 4. **Service Startup Issues**
-   - Check logs: `docker-compose logs [service-name]`
-   - Verify environment variables in docker-compose.yml
+   - Check logs: `docker compose logs [service-name]`
+   - Verify environment variables in your compose files
 
 ### Logs
 ```bash
 # View all logs
-docker-compose logs -f
+docker compose logs -f
 
 # View specific service logs
-docker-compose logs -f postgres-server
-docker-compose logs -f kafka
-docker-compose logs -f redis
+docker compose logs -f postgres-server
+docker compose logs -f kafka
+docker compose logs -f redis
 ```
 
 ## 🧹 Cleanup
 
 ### Stop All Services
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Remove All Data (⚠️ Destructive)
 ```bash
-docker-compose down -v
+docker compose down -v
 docker system prune -a
 ```
 
@@ -220,4 +220,4 @@ docker system prune -a
 ### Application Metrics
 - Server: http://localhost:8081/actuator/prometheus
 - Inventory: http://localhost:8082/actuator/prometheus
-- Event Relay: http://localhost:8083/actuator/prometheus
+- Event Relay: http://localhost:8084/actuator/prometheus

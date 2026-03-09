@@ -9,7 +9,7 @@ scrape_configs:
   # TrackOps Spring Boot Application
   - job_name: 'trackops-server'
     static_configs:
-      - targets: ['trackops-server:8080']
+      - targets: ['trackops-server:8081']
     metrics_path: '/actuator/prometheus'
     scrape_interval: 10s
     scrape_timeout: 5s

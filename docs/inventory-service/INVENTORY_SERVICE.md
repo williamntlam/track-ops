@@ -108,12 +108,12 @@ CREATE TABLE inventory_reservations (
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd track-ops/inventory-service
+   cd track-ops/services/inventory-service
    ```
 
 2. **Start dependencies**
    ```bash
-   docker-compose up -d postgres redis kafka
+   docker compose up -d postgres redis kafka
    ```
 
 3. **Run the application**
@@ -123,7 +123,7 @@ CREATE TABLE inventory_reservations (
 
 4. **Verify health**
    ```bash
-   curl http://localhost:8081/actuator/health
+   curl http://localhost:8082/actuator/health
    ```
 
 ### Docker Deployment
@@ -135,7 +135,7 @@ CREATE TABLE inventory_reservations (
 
 2. **Run with Docker Compose**
    ```bash
-   docker-compose up inventory-service
+   docker compose up inventory-service
    ```
 
 ### Kubernetes Deployment
@@ -256,7 +256,7 @@ kubectl logs -l app=inventory-service
 
 ### Project Structure
 ```
-inventory-service/
+services/inventory-service/
 ├── src/main/java/com/trackops/inventory/
 │   ├── domain/                    # Domain models and events
 │   ├── application/               # Application services

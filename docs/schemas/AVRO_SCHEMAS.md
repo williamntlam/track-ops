@@ -1,6 +1,6 @@
-# Schema Registry Schemas
+# Avro Schemas (Schema Registry)
 
-This directory contains Avro schemas for all events published to Kafka topics.
+TrackOps stores Avro schemas in `schemas/avro/`. These are the schemas registered in Schema Registry and used by services when producing/consuming Kafka events.
 
 ## Schema Compatibility
 
@@ -12,15 +12,15 @@ The default compatibility level is set to **BACKWARD**, which means:
 ## Schema Files
 
 ### Order Events
-- `OrderCreatedEvent.avsc` - Published to `ORDER_CREATED` topic
-- `OrderStatusUpdatedEvent.avsc` - Published to `ORDER_STATUS_UPDATED` topic
-- `OrderDeliveredEvent.avsc` - Published to `ORDER_DELIVERED` topic
-- `OrderCancelledEvent.avsc` - Published to `ORDER_CANCELLED` topic
+- `schemas/avro/OrderCreatedEvent.avsc` - Published to `ORDER_CREATED` topic
+- `schemas/avro/OrderStatusUpdatedEvent.avsc` - Published to `ORDER_STATUS_UPDATED` topic
+- `schemas/avro/OrderDeliveredEvent.avsc` - Published to `ORDER_DELIVERED` topic
+- `schemas/avro/OrderCancelledEvent.avsc` - Published to `ORDER_CANCELLED` topic
 
 ### Inventory Events
-- `InventoryReservedEvent.avsc` - Published to `INVENTORY_RESERVED` topic
-- `InventoryReservationFailedEvent.avsc` - Published to `INVENTORY_RESERVATION_FAILED` topic
-- `InventoryReleasedEvent.avsc` - Published to `INVENTORY_RELEASED` topic
+- `schemas/avro/InventoryReservedEvent.avsc` - Published to `INVENTORY_RESERVED` topic
+- `schemas/avro/InventoryReservationFailedEvent.avsc` - Published to `INVENTORY_RESERVATION_FAILED` topic
+- `schemas/avro/InventoryReleasedEvent.avsc` - Published to `INVENTORY_RELEASED` topic
 
 ## Schema Subject Naming
 

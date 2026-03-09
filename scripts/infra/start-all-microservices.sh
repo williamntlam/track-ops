@@ -210,7 +210,7 @@ else
     mkdir -p logs
     
     # Start services in background
-    start_service_background "Order Service" "services/server" "default"
+    start_service_background "Order Service" "services/order-service" "default"
     start_service_background "Inventory Service" "services/inventory-service" "default"
     start_service_background "Event Relay Service" "services/event-relay-service" "default"
 fi

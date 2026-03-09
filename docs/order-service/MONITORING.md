@@ -254,7 +254,7 @@ open http://localhost:3000
 #### **Metrics Not Appearing**
 ```bash
 # Check if metrics endpoint is accessible
-curl http://localhost:8080/actuator/prometheus
+curl http://localhost:8081/actuator/prometheus
 
 # Check Prometheus targets
 curl http://localhost:9090/api/v1/targets

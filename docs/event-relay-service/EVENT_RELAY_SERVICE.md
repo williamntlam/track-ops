@@ -87,12 +87,12 @@ ORDER BY created_at ASC;
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd track-ops/event-relay-service
+   cd track-ops/services/event-relay-service
    ```
 
 2. **Start dependencies**
    ```bash
-   docker-compose up -d postgres kafka
+   docker compose up -d postgres kafka
    ```
 
 3. **Run the application**
@@ -102,7 +102,7 @@ ORDER BY created_at ASC;
 
 4. **Verify health**
    ```bash
-   curl http://localhost:8082/actuator/health
+   curl http://localhost:8084/actuator/health
    ```
 
 ### Docker Deployment
@@ -114,7 +114,7 @@ ORDER BY created_at ASC;
 
 2. **Run with Docker Compose**
    ```bash
-   docker-compose up event-relay-service
+   docker compose up event-relay-service
    ```
 
 ### Kubernetes Deployment
@@ -236,7 +236,7 @@ kubectl logs -l app=event-relay-service
 
 ### Project Structure
 ```
-event-relay-service/
+services/event-relay-service/
 ├── src/main/java/com/trackops/eventrelay/
 │   ├── domain/                    # Domain models
 │   ├── application/               # Application services

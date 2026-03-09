@@ -16,12 +16,12 @@ This guide provides comprehensive information for developers working on the Trac
 1. **Clone the repository**
 ```bash
 git clone https://github.com/your-org/track-ops.git
-cd track-ops/server
+cd track-ops/services/order-service
 ```
 
 2. **Start dependencies**
 ```bash
-docker-compose up -d postgres redis kafka
+docker compose up -d postgres redis kafka
 ```
 
 3. **Run the application**
@@ -31,13 +31,13 @@ docker-compose up -d postgres redis kafka
 
 4. **Verify setup**
 ```bash
-curl http://localhost:8080/actuator/health
+curl http://localhost:8081/actuator/health
 ```
 
 ## 🏗️ Project Structure
 
 ```
-server/
+services/order-service/
 ├── src/
 │   ├── main/
 │   │   ├── java/
@@ -66,7 +66,7 @@ server/
 │       ├── java/                     # Test classes
 │       └── resources/                # Test configuration
 ├── build.gradle                      # Build configuration
-├── docker-compose.yml               # Local development
+├── (Docker is centralized under /docker/services/*.yml)
 └── Dockerfile                       # Container image
 ```
 
@@ -710,7 +710,7 @@ public class OrderService {
 ### Local Development
 ```bash
 # Start dependencies
-docker-compose up -d
+docker compose up -d
 
 # Run application
 ./gradlew bootRun

@@ -19,7 +19,7 @@ This guide covers deploying the TrackOps server in various environments, from lo
 
 ### 1. Using Docker Compose
 
-Create a `docker-compose.yml` file:
+Create a Docker Compose file (for example `compose.yml`):
 
 ```yaml
 version: '3.8'
@@ -94,13 +94,13 @@ volumes:
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f trackops-server
+docker compose logs -f trackops-server
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ### 3. Application Configuration
@@ -192,7 +192,7 @@ USER trackops
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+  CMD curl -f http://localhost:8081/actuator/health || exit 1
 
 # Expose port
 EXPOSE 8080
@@ -527,29 +527,29 @@ spring:
 
 ```bash
 # Application health
-curl http://localhost:8080/actuator/health
+curl http://localhost:8081/actuator/health
 
 # Database health
-curl http://localhost:8080/actuator/health/db
+curl http://localhost:8081/actuator/health/db
 
 # Redis health
-curl http://localhost:8080/actuator/health/redis
+curl http://localhost:8081/actuator/health/redis
 
 # Kafka health
-curl http://localhost:8080/actuator/health/kafka
+curl http://localhost:8081/actuator/health/kafka
 ```
 
 ### Metrics Endpoints
 
 ```bash
 # Application metrics
-curl http://localhost:8080/actuator/metrics
+curl http://localhost:8081/actuator/metrics
 
 # Prometheus metrics
-curl http://localhost:8080/actuator/prometheus
+curl http://localhost:8081/actuator/prometheus
 
 # JVM metrics
-curl http://localhost:8080/actuator/metrics/jvm.memory.used
+curl http://localhost:8081/actuator/metrics/jvm.memory.used
 ```
 
 ## 🔒 Security Configuration
@@ -697,7 +697,7 @@ CREATE TABLE outbox_events (
 #### 1. Database Connection Issues
 ```bash
 # Check database connectivity
-docker exec -it trackops-server curl -f http://localhost:8080/actuator/health/db
+docker exec -it trackops-server curl -f http://localhost:8081/actuator/health/db
 
 # Check database logs
 docker logs postgres
@@ -706,7 +706,7 @@ docker logs postgres
 #### 2. Redis Connection Issues
 ```bash
 # Check Redis connectivity
-docker exec -it trackops-server curl -f http://localhost:8080/actuator/health/redis
+docker exec -it trackops-server curl -f http://localhost:8081/actuator/health/redis
 
 # Check Redis logs
 docker logs redis
@@ -715,7 +715,7 @@ docker logs redis
 #### 3. Kafka Connection Issues
 ```bash
 # Check Kafka connectivity
-docker exec -it trackops-server curl -f http://localhost:8080/actuator/health/kafka
+docker exec -it trackops-server curl -f http://localhost:8081/actuator/health/kafka
 
 # Check Kafka logs
 docker logs kafka
@@ -727,7 +727,7 @@ docker logs kafka
 docker logs trackops-server
 
 # Check JVM memory
-docker exec -it trackops-server curl http://localhost:8080/actuator/metrics/jvm.memory.used
+docker exec -it trackops-server curl http://localhost:8081/actuator/metrics/jvm.memory.used
 ```
 
 ### Performance Tuning

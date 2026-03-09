@@ -81,7 +81,7 @@ echo "ℹ️  Debezium Connect will be started by the main startup script after 
 
 # Initialize databases
 echo "🗄️ Initializing databases..."
-./scripts/infra/init-databases.sh
+./scripts/db/init-databases.sh
 
 echo "✅ Infrastructure services are ready!"
 echo ""
@@ -106,7 +106,7 @@ echo "🎯 To start the microservices (Order, Inventory, Event Relay), run:"
 echo "  ./scripts/infra/start-all-microservices.sh"
 echo ""
 echo "   Or start them individually:"
-echo "   - Order Service:     cd services/server && ./gradlew bootRun"
+echo "   - Order Service:     cd services/order-service && ./gradlew bootRun"
 echo "                        OR: docker compose -f docker/services/trackops-server.yml up -d"
 echo "   - Inventory Service: cd services/inventory-service && ./gradlew bootRun"
 echo "                        OR: docker compose -f docker/services/inventory-service.yml up -d"

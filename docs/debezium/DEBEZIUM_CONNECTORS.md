@@ -1,13 +1,12 @@
 # Debezium Connector Configuration
 
-This directory contains Debezium connector configurations for TrackOps.
+Debezium connector configs are stored in `services/debezium-connectors/` and registered against the local Debezium Connect worker.
 
 ## 📁 Files
 
-- `trackops-orders-connector.json` - PostgreSQL connector for orders database
-- `trackops-inventory-reserve-outbox-connector.json` - PostgreSQL connector for inventory reserve outbox table (used when `app.inventory.reserve-request.mode=cdc`)
+- `services/debezium-connectors/trackops-orders-connector.json` - PostgreSQL connector for orders database
+- `services/debezium-connectors/trackops-inventory-reserve-outbox-connector.json` - PostgreSQL connector for inventory reserve outbox table (used when `app.inventory.reserve-request.mode=cdc`)
 - `scripts/infra/debezium/setup-debezium-connectors.sh` - Script to create connectors
-- `README.md` - This documentation
 
 ## 🚀 Quick Start
 
@@ -25,8 +24,8 @@ This directory contains Debezium connector configurations for TrackOps.
 
 ### 3. Configure Application for Debezium
 ```bash
-# Start server with Debezium strategy
-cd services/server
+# Start Order Service with Debezium strategy
+cd services/order-service
 ./gradlew bootRun --args='--app.event-publishing.strategy=debezium'
 ```
 

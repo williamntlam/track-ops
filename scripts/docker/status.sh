@@ -34,15 +34,15 @@ print_status "==============================="
 # Change to project root directory
 cd "$(dirname "$0")/.."
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    print_error "docker-compose is not installed or not in PATH"
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    print_error "docker is not installed or not in PATH"
     exit 1
 fi
 
 # Show container status
 print_status "Container Status:"
-docker-compose ps
+docker compose ps
 
 echo ""
 
@@ -51,11 +51,11 @@ print_status "Service Health Check:"
 services=("postgres" "redis" "kafka" "schema-registry" "prometheus" "grafana" "trackops-server")
 
 for service in "${services[@]}"; do
-    if docker-compose ps $service 2>/dev/null | grep -q "healthy"; then
+    if docker compose ps "$service" 2>/dev/null | grep -q "healthy"; then
         print_success "$service: Healthy"
-    elif docker-compose ps $service 2>/dev/null | grep -q "unhealthy"; then
+    elif docker compose ps "$service" 2>/dev/null | grep -q "unhealthy"; then
         print_error "$service: Unhealthy"
-    elif docker-compose ps $service 2>/dev/null | grep -q "Up"; then
+    elif docker compose ps "$service" 2>/dev/null | grep -q "Up"; then
         print_warning "$service: Running (no health check)"
     else
         print_error "$service: Not running"
@@ -87,7 +87,7 @@ print_status "Service URLs:"
 print_status "  TrackOps Server:     http://localhost:8081"
 print_status "  Inventory Service:   http://localhost:8082"
 print_status "  Event Relay Service: http://localhost:8084"
-print_status "  Schema Registry:     http://localhost:8081 (Note: port conflict with Order Service if both running)"
+print_status "  Schema Registry:     http://localhost:8085"
 print_status "  Grafana:              http://localhost:3000 (admin/admin)"
 print_status "  Prometheus:           http://localhost:9090"
 print_status "  PostgreSQL:           localhost:5432"

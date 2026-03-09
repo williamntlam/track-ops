@@ -76,14 +76,14 @@ Order Service → Consumes INVENTORY_RELEASED → Logs Release
 ## 🏢 Service Responsibilities
 
 ### Order Service
-- **Primary Database**: `trackops` (PostgreSQL)
+- **Primary Database**: `trackops_orders` (PostgreSQL)
 - **Responsibilities**:
   - Order CRUD operations
   - Business logic and validation
   - Order status management
   - Outbox event creation
   - Event consumption (inventory responses)
-- **Ports**: 8080
+- **Ports**: 8081
 - **Dependencies**: PostgreSQL, Redis, Kafka (consumer)
 
 ### Inventory Service
@@ -93,17 +93,17 @@ Order Service → Consumes INVENTORY_RELEASED → Logs Release
   - Reservation and release logic
   - Event consumption (order events)
   - Event publishing (inventory responses)
-- **Ports**: 8081
+- **Ports**: 8082
 - **Dependencies**: PostgreSQL, Redis, Kafka (producer/consumer)
 
 ### Event Relay Service
-- **Primary Database**: `trackops` (PostgreSQL) - Read-only
+- **Primary Database**: `trackops_event_relay` (PostgreSQL)
 - **Responsibilities**:
   - Outbox event polling
   - Kafka event publishing
   - Retry logic and error handling
   - Event cleanup
-- **Ports**: 8082
+- **Ports**: 8084
 - **Dependencies**: PostgreSQL (Order Service DB), Kafka (producer)
 
 ## 📡 Event Topics
@@ -151,14 +151,14 @@ processed_events
 ## 🔧 Configuration
 
 ### Service Ports
-- **Order Service**: 8080
-- **Inventory Service**: 8081
-- **Event Relay Service**: 8082
+- **Order Service**: 8081
+- **Inventory Service**: 8082
+- **Event Relay Service**: 8084
 
 ### Database Connections
-- **Order Service**: `jdbc:postgresql://localhost:5432/trackops`
-- **Inventory Service**: `jdbc:postgresql://localhost:5432/trackops_inventory`
-- **Event Relay Service**: `jdbc:postgresql://localhost:5432/trackops` (read-only)
+- **Order Service**: `jdbc:postgresql://localhost:5432/trackops_orders`
+- **Inventory Service**: `jdbc:postgresql://localhost:5433/trackops_inventory`
+- **Event Relay Service**: `jdbc:postgresql://localhost:5434/trackops_event_relay`
 
 ### Kafka Configuration
 - **Bootstrap Servers**: `localhost:9092`
@@ -169,14 +169,8 @@ processed_events
 
 ## 🚀 Deployment
 
-### Docker Compose
-```bash
-# Start all services
-docker-compose up -d
-
-# Start specific services
-docker-compose up order-service inventory-service event-relay-service
-```
+### Docker
+This document describes the logical architecture. For up-to-date Docker commands and service definitions, see `docs/docker/DOCKER-SETUP.md` and the `docker/services/*.yml` files.
 
 ### Kubernetes
 ```bash
@@ -192,9 +186,9 @@ kubectl apply -f k8s/event-relay-service.yaml
 ## 📈 Monitoring
 
 ### Health Checks
-- **Order Service**: `http://localhost:8080/actuator/health`
-- **Inventory Service**: `http://localhost:8081/actuator/health`
-- **Event Relay Service**: `http://localhost:8082/actuator/health`
+- **Order Service**: `http://localhost:8081/actuator/health`
+- **Inventory Service**: `http://localhost:8082/actuator/health`
+- **Event Relay Service**: `http://localhost:8084/actuator/health`
 
 ### Metrics
 - **Order Service**: Order processing metrics, cache hit rates

@@ -38,10 +38,10 @@ check_service_health() {
     print_status "Waiting for $service_name to be healthy..."
     
     while [ $attempt -le $max_attempts ]; do
-        if docker-compose ps $service_name | grep -q "healthy"; then
+        if docker compose ps "$service_name" | grep -q "healthy"; then
             print_success "$service_name is healthy!"
             return 0
-        elif docker-compose ps $service_name | grep -q "unhealthy"; then
+        elif docker compose ps "$service_name" | grep -q "unhealthy"; then
             print_error "$service_name is unhealthy!"
             return 1
         fi
@@ -63,9 +63,9 @@ start_service() {
     print_status "Starting $service_name..."
     
     if [ -n "$service_file" ]; then
-        docker-compose -f "$service_file" up -d
+        docker compose -f "$service_file" up -d
     else
-        docker-compose up -d "$service_name"
+        docker compose up -d "$service_name"
     fi
     
     if ! check_service_health "$service_name"; then
@@ -81,9 +81,9 @@ print_status "======================================"
 # Change to project root directory
 cd "$(dirname "$0")/.."
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    print_error "docker-compose is not installed or not in PATH"
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    print_error "docker is not installed or not in PATH"
     exit 1
 fi
 
@@ -95,7 +95,7 @@ fi
 
 # Stop any existing containers first
 print_status "Stopping any existing containers..."
-docker-compose down 2>/dev/null || true
+docker compose down 2>/dev/null || true
 
 # Start infrastructure services first (in dependency order)
 print_status "Phase 1: Starting infrastructure services..."
@@ -166,7 +166,7 @@ print_status "Service URLs:"
 print_status "  TrackOps Server:     http://localhost:8081"
 print_status "  Inventory Service:   http://localhost:8082"
 print_status "  Event Relay Service:  http://localhost:8084"
-print_status "  Schema Registry:     http://localhost:8081"
+print_status "  Schema Registry:     http://localhost:8085"
 print_status "  Grafana:              http://localhost:3000 (admin/admin)"
 print_status "  Prometheus:           http://localhost:9090"
 print_status "  PostgreSQL:           localhost:5432"
@@ -178,5 +178,5 @@ print_status "======================================"
 
 # Show running containers
 print_status "Running containers:"
-docker-compose ps
+docker compose ps
 

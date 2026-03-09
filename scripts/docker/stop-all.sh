@@ -36,9 +36,9 @@ print_status "===================================="
 # Change to project root directory
 cd "$(dirname "$0")/.."
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    print_error "docker-compose is not installed or not in PATH"
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    print_error "docker is not installed or not in PATH"
     exit 1
 fi
 
@@ -53,20 +53,20 @@ docker compose -f docker/services/event-relay-service.yml down 2>/dev/null || tr
 
 # Stop infrastructure containers
 print_status "Stopping infrastructure containers..."
-docker-compose down 2>/dev/null || true
+docker compose down 2>/dev/null || true
 
 # Optional: Remove volumes (uncomment if you want to clean data)
 # print_warning "Removing volumes (this will delete all data)..."
-# docker-compose down -v
+# docker compose down -v
 
 # Optional: Remove images (uncomment if you want to clean images)
 # print_warning "Removing images..."
-# docker-compose down --rmi all
+# docker compose down --rmi all
 
 print_success "All services have been stopped!"
 print_status "===================================="
 
 # Show remaining containers
 print_status "Remaining containers:"
-docker-compose ps 2>/dev/null || print_status "No containers running"
+docker compose ps 2>/dev/null || print_status "No containers running"
 

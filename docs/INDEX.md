@@ -9,16 +9,19 @@ TrackOps is a **production-ready, enterprise-grade** microservices system implem
 This documentation is organized by service and component for comprehensive understanding:
 
 ### **Core Service Documentation**
-- **[Server (Order Service)](./server/README.md)** - Order management with CDC and Redis caching
-- **[Inventory Service](./inventory-service/README.md)** - Inventory management with intelligent caching
-- **[Event Relay Service](./event-relay-service/README.md)** - Event publishing and CDC orchestration
+- **[Order Service](./order-service/ORDER_SERVICE_API.md)** - Order management with CDC and Redis caching
+- **[Inventory Service](./inventory-service/INVENTORY_SERVICE.md)** - Inventory management with intelligent caching
+- **[Event Relay Service](./event-relay-service/EVENT_RELAY_SERVICE.md)** - Event publishing and CDC orchestration
 - **[Event Publishing Strategy](./EVENT_PUBLISHING_STRATEGY.md)** - Advanced CDC and Outbox patterns
 
 ### **Infrastructure & Architecture**
-- **[Docker Setup](./docker/README.md)** - Container configuration and management
+- **[Docker Setup](./docker/DOCKER_SERVICES.md)** - Container configuration and management
 - **[Docker Setup Guide](./docker/DOCKER-SETUP.md)** - Complete Docker setup instructions
 - **[Architecture](./architecture/)** - System design patterns and principles
 - **[MirrorMaker 2 (MM2)](./architecture/MIRRORMAKER2.md)** - Cross-cluster Kafka replication (DR / failover)
+- **[Avro Schemas](./schemas/AVRO_SCHEMAS.md)** - Schema Registry subjects and schema evolution
+- **[Schema Registry Implementation](./SCHEMA_REGISTRY_IMPLEMENTATION.md)** - How Schema Registry is used in TrackOps
+- **[Debezium Connectors](./debezium/DEBEZIUM_CONNECTORS.md)** - Connector configs and setup script
 - **[API Reference](./api/)** - Comprehensive API documentation
 - **[Standards](./standards/)** - Enterprise coding practices and conventions
 - **[Patterns](./patterns/)** - Advanced design patterns and implementations

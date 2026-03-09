@@ -139,7 +139,7 @@ This single command will:
 | **Order Service** | http://localhost:8081 | Order management API with Redis caching, SAGA orchestration |
 | **Inventory Service** | http://localhost:8082 | Inventory management API with Redis caching |
 | **Event Relay Service** | http://localhost:8084 | Outbox pattern event processing API |
-| **Schema Registry** | http://localhost:8081 | Confluent Schema Registry for Avro schema management |
+| **Schema Registry** | http://localhost:8085 | Confluent Schema Registry for Avro schema management |
 | **Debezium Connect** | http://localhost:8083 | CDC connector management (Kafka Connect REST API) |
 | **Kafka UI** | http://localhost:8080 | Kafka monitoring dashboard |
 | **Debezium UI** | http://localhost:8084 | Debezium CDC monitoring |
@@ -321,7 +321,7 @@ TrackOps supports **two distinct configuration approaches**:
 
 ### Infrastructure
 - **Message Broker**: Apache Kafka (3 partitions, replication factor 1)
-- **Schema Registry**: Confluent Schema Registry (port 8081) for Avro schema management
+- **Schema Registry**: Confluent Schema Registry (port 8085) for Avro schema management
 - **Database**: PostgreSQL 15 (separate databases per service, CDC enabled)
 - **Cache**: Redis 7 (multiple databases, TTL management)
 - **CDC Engine**: Debezium Connect with PostgreSQL connector (port 8083)
@@ -576,13 +576,13 @@ app.event-publishing.strategy=debezium
 
 All documentation is organized in the [`docs/`](./docs/) directory:
 
-- **[Main Documentation](./docs/README.md)** - Complete project overview
+- **[Main Documentation](./docs/INDEX.md)** - Complete project overview
 - **[Event Publishing Strategy](./docs/EVENT_PUBLISHING_STRATEGY.md)** - CDC and Outbox patterns
 - **[Schema Registry Implementation](./docs/SCHEMA_REGISTRY_IMPLEMENTATION.md)** - Avro serialization and schema management
-- **[Server Documentation](./docs/server/README.md)** - Order service details
-- **[Inventory Service](./docs/inventory-service/README.md)** - Inventory management
-- **[Event Relay Service](./docs/event-relay-service/README.md)** - Event publishing
-- **[Docker Setup](./docs/docker/README.md)** - Container configuration
+- **[Order Service Documentation](./docs/order-service/ORDER_SERVICE_API.md)** - Order service details
+- **[Inventory Service](./docs/inventory-service/INVENTORY_SERVICE.md)** - Inventory management
+- **[Event Relay Service](./docs/event-relay-service/EVENT_RELAY_SERVICE.md)** - Event publishing
+- **[Docker Setup](./docs/docker/DOCKER_SERVICES.md)** - Container configuration
 - **[Architecture](./docs/architecture/)** - System design patterns
 - **[API Reference](./docs/api/)** - API documentation
 - **[Learning Resources](./docs/learning/)** - Tutorials and guides

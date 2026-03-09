@@ -82,7 +82,7 @@ The following environment variables can be set:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SCHEMA_REGISTRY_URL` | Schema Registry endpoint | `http://localhost:8081` |
+| `SCHEMA_REGISTRY_URL` | Schema Registry endpoint | `http://localhost:8085` |
 | `SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO` | API key:secret for authentication | (empty) |
 
 ### Application Properties
@@ -91,7 +91,7 @@ In `application.properties`:
 
 ```properties
 # Schema Registry Configuration
-schema.registry.url=http://localhost:8081
+schema.registry.url=http://localhost:8085
 schema.registry.basic.auth.user.info=${SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO:}
 schema.registry.cache.capacity=1000
 schema.registry.auto.register.schemas=true
@@ -155,7 +155,7 @@ The default compatibility level is **BACKWARD**, which means:
 
 2. Verify Schema Registry is running:
    ```bash
-   curl http://localhost:8081/subjects
+   curl http://localhost:8085/subjects
    ```
 
 3. Start the application - schemas will be auto-registered
@@ -173,7 +173,7 @@ To test compatibility enforcement:
 
 ### Schema Registry Connection Issues
 
-- Check that Schema Registry is running: `curl http://localhost:8081/subjects`
+- Check that Schema Registry is running: `curl http://localhost:8085/subjects`
 - Verify the URL in `application.properties`
 - Check network connectivity between services
 

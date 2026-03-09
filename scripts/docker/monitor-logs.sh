@@ -109,9 +109,9 @@ print_status "======================================="
 # Change to project root directory
 cd "$(dirname "$0")/.."
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    print_error "docker-compose is not installed or not in PATH"
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    print_error "docker is not installed or not in PATH"
     exit 1
 fi
 
@@ -125,7 +125,7 @@ fi
 print_status "Using terminal emulator: $TERMINAL_CMD"
 
 # Check if services are running
-if ! docker-compose ps | grep -q "Up"; then
+if ! docker compose ps | grep -q "Up"; then
     print_warning "No services appear to be running. Please start services first with:"
     print_warning "  ./scripts/docker/start-all.sh"
     print_warning "  or"
@@ -138,7 +138,7 @@ services=("postgres" "redis" "kafka" "prometheus" "grafana" "trackops-server")
 
 # Open log monitoring terminals for each running service
 for service in "${services[@]}"; do
-    if docker-compose ps "$service" | grep -q "Up"; then
+    if docker compose ps "$service" | grep -q "Up"; then
         print_status "Opening log monitor for $service..."
         open_log_terminal "$service" "$TERMINAL_CMD"
     else

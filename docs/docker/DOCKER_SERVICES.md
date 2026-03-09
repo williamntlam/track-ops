@@ -91,4 +91,4 @@ docker compose -f docker/services/redis.yml up -d
 - Kafka: 9092 (broker), 9093 (controller)
 - Prometheus: 9090
 - Grafana: 3000
-- TrackOps Server: 8080
+- TrackOps Server: 8081

@@ -159,7 +159,7 @@ private OrderStatus newStatus;
 
 ### **Valid Order Creation**
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders \
+curl -X POST http://localhost:8081/api/v1/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customerId": "123e4567-e89b-12d3-a456-426614174000",
@@ -178,7 +178,7 @@ curl -X POST http://localhost:8080/api/v1/orders \
 
 ### **Invalid Order Creation (Validation Errors)**
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders \
+curl -X POST http://localhost:8081/api/v1/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customerId": null,

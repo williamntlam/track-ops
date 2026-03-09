@@ -2,7 +2,7 @@ services:
   # TrackOps Spring Boot Application
   trackops-server:
     build:
-      context: ../services/server
+      context: ../services/order-service
       dockerfile: Dockerfile
     container_name: trackops-server
     ports:

@@ -238,10 +238,10 @@ GET /health/live
 ### Load Balancer Health Check
 ```bash
 # Simple health check for load balancers
-curl -f http://localhost:8080/health/simple
+curl -f http://localhost:8081/health/simple
 
 # Detailed health check for monitoring
-curl http://localhost:8080/actuator/health
+curl http://localhost:8081/actuator/health
 ```
 
 ### Kubernetes Deployment
@@ -275,10 +275,10 @@ spec:
 ### Monitoring Integration
 ```bash
 # Prometheus metrics
-curl http://localhost:8080/actuator/prometheus
+curl http://localhost:8081/actuator/prometheus
 
 # Application info
-curl http://localhost:8080/actuator/info
+curl http://localhost:8081/actuator/info
 ```
 
 ## 🔧 Configuration
@@ -351,7 +351,7 @@ Set up alerts for:
 #### Database Health Check Failing
 ```bash
 # Check database connectivity
-curl http://localhost:8080/actuator/health/database
+curl http://localhost:8081/actuator/health/database
 
 # Common causes:
 # - Database server down
@@ -363,7 +363,7 @@ curl http://localhost:8080/actuator/health/database
 #### Redis Health Check Failing
 ```bash
 # Check Redis connectivity
-curl http://localhost:8080/actuator/health/redis
+curl http://localhost:8081/actuator/health/redis
 
 # Common causes:
 # - Redis server down
@@ -375,7 +375,7 @@ curl http://localhost:8080/actuator/health/redis
 #### Kafka Health Check Failing
 ```bash
 # Check Kafka connectivity
-curl http://localhost:8080/actuator/health/kafka
+curl http://localhost:8081/actuator/health/kafka
 
 # Common causes:
 # - Kafka broker down

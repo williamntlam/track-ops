@@ -29,7 +29,7 @@ print_error() {
 
 # Get the project root directory (parent of scripts folder)
 PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-cd "$PROJECT_ROOT/services/server"
+cd "$PROJECT_ROOT/services/order-service"
 
 print_status "Stopping Order Service..."
 pkill -f "com.trackops.server.ServerApplication" 2>/dev/null || print_warning "No running Order Service found"

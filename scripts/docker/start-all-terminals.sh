@@ -48,7 +48,7 @@ detect_terminal() {
     fi
 }
 
-# Function to open terminal with service
+ # Function to open terminal with service
 open_service_terminal() {
     local service_name=$1
     local service_file=$2
@@ -70,9 +70,9 @@ echo "----------------------------------------"
 
 # Start the service and follow logs
 if [ -n "$service_file" ]; then
-    docker-compose -f "$service_file" up 2>&1 | tee "$log_file"
+    docker compose -f "$service_file" up 2>&1 | tee "$log_file"
 else
-    docker-compose up "$service_name" 2>&1 | tee "$log_file"
+    docker compose up "$service_name" 2>&1 | tee "$log_file"
 fi
 
 echo "Service $service_name stopped. Press any key to close this window..."
@@ -145,9 +145,9 @@ print_status "=========================================================="
 # Change to project root directory
 cd "$(dirname "$0")/.."
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    print_error "docker-compose is not installed or not in PATH"
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    print_error "docker is not installed or not in PATH"
     exit 1
 fi
 
@@ -168,7 +168,7 @@ print_status "Using terminal emulator: $TERMINAL_CMD"
 
 # Stop any existing containers first
 print_status "Stopping any existing containers..."
-docker-compose down 2>/dev/null || true
+docker compose down 2>/dev/null || true
 
 # Start infrastructure services first (in dependency order)
 print_status "Phase 1: Starting infrastructure services in separate terminals..."
@@ -235,7 +235,7 @@ fi
 print_success "All services are running successfully in separate terminals!"
 print_status "=========================================================="
 print_status "Service URLs:"
-print_status "  TrackOps Server: http://localhost:8080"
+print_status "  TrackOps Server: http://localhost:8081"
 print_status "  Grafana:         http://localhost:3000 (admin/admin)"
 print_status "  Prometheus:      http://localhost:9090"
 print_status "  PostgreSQL:      localhost:5432"
@@ -248,5 +248,5 @@ print_status "Log files are also saved to /tmp/trackops-*.log"
 
 # Show running containers
 print_status "Running containers:"
-docker-compose ps
+docker compose ps
 
